@@ -37,7 +37,7 @@
 #include <sstream>
 #include <cctype>
 
-#include "ResourceLimits.h"
+#include "resourcelimits.h"
 
 namespace glslang {
 
