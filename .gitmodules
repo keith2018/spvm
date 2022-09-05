@@ -1,0 +1,6 @@
+[submodule "test/googletest"]
+	path = test/googletest
+	url = git@github.com:google/googletest.git
+[submodule "shadertoy/third_party/glslang"]
+	path = shadertoy/third_party/glslang
+	url = git@github.com:KhronosGroup/glslang.git
