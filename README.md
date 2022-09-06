@@ -8,6 +8,10 @@ Tiny [SPIR-V](https://registry.khronos.org/SPIR-V/) virtual machine (interpreter
 
 ![](images/awesomeface.png)
 
+Opcodes support status:
+- Core SPIR-V Opcodes: [OPCODE_CORE.md](OPCODE_CORE.md)
+- Ext Opcodes: [OPCODE_EXT.md](OPCODE_EXT.md)
+
 The project is still in progress ...
 
 ## Spvm-ShaderToy
