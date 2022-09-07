@@ -10,6 +10,14 @@
 
 namespace SPVM {
 
+// image coordinates(i,j,k) with sample weight
+typedef struct SpvmImageCoord_ {
+  SpvmI32 coord;
+  SpvmF32 weight;
+} SpvmImageCoord;
+
+#define ImageCoordNull {0, 1.f}
+
 SpvmImage *createImage(SpvmImageInfo *imageInfo) {
   SpvmImage *ret = (SpvmImage *) malloc(sizeof(SpvmImage));
   ret->info = *imageInfo;
@@ -160,11 +168,6 @@ bool checkImageType(SpvmImage *image, SpvmTypeImage *type) {
   return true;
 }
 
-SpvmWord getLodLevel(SpvmValue *sampledImage, SpvmImageOperands *operands) {
-  // TODO
-  return 0;
-}
-
 SpvmVec4 colorWithRGBAFloat(SpvmF32 r, SpvmF32 g, SpvmF32 b, SpvmF32 a) {
   SpvmVec4 ret;
   ret.elem[0].f32 = r;
@@ -220,7 +223,7 @@ SpvmWord getImagePixelBytesSize(SpvmFormat format) {
   return 0;
 }
 
-SpvmVec4 getImageColorRGBA(SpvmFormat format, SpvmByte *texelPtr) {
+SpvmVec4 getImageColorRGBA(SpvmFormat format, const SpvmByte *texelPtr) {
   SpvmVec4 texel;
   switch (format) {
     case SPVM_FORMAT_R8_UNORM: {
@@ -309,11 +312,8 @@ SpvmWord getImageDimCoordinatesCount(SpvDim dim) {
   return 0;
 }
 
-SpvmVec4 getCoordinates(SpvmValue *coordinate, SpvmImageInfo *imageInfo, bool arrayed, bool proj) {
-  SpvmVec4 uvwa; // if projection, a -> q
-  for (SpvmWord i = 0; i < 4; i++) {
-    uvwa.elem[i].f32 = 0;
-  }
+SpvmVec4 getCoordinatesFromValue(SpvmValue *coordinate, SpvmImageInfo *imageInfo, bool arrayed, bool proj) {
+  SpvmVec4 uvwa{0, 0, 0, 0}; // if projection, a -> q
   if (coordinate->memberCnt == 0) {
     uvwa.elem[0].f32 = coordinate->value.f32;
   } else {
@@ -339,7 +339,7 @@ SpvmVec4 getCoordinates(SpvmValue *coordinate, SpvmImageInfo *imageInfo, bool ar
   return uvwa;
 }
 
-SpvmVecElement getDepthCompare(SpvmVecElement depth, SpvmVecElement dRef, SpvmCompareOp op) {
+SpvmVecElement getDepthCompareResult(SpvmVecElement depth, SpvmVecElement dRef, SpvmCompareOp op) {
   bool pass = false;
   switch (op) {
     case SPVM_COMPARE_OP_NEVER:
@@ -373,22 +373,118 @@ SpvmVecElement getDepthCompare(SpvmVecElement depth, SpvmVecElement dRef, SpvmCo
   return ret;
 }
 
-SpvmVec4 sampleImageLevel(SpvmImageLevel *imageLevel, SpvmI32 iIdx, SpvmI32 jIdx, SpvmI32 kIdx,
+SpvmVec4 sampleImageLevel(SpvmImageLevel *imageLevel, SpvmImageCoord iIdx, SpvmImageCoord jIdx, SpvmImageCoord kIdx,
                           SpvmSamplerInfo *samplerInfo, SpvmFormat imageFormat) {
-  iIdx = getWrappingAddress(iIdx, (SpvmI32) imageLevel->width, samplerInfo->addressModeU);
-  jIdx = getWrappingAddress(jIdx, (SpvmI32) imageLevel->height, samplerInfo->addressModeV);
-  kIdx = getWrappingAddress(kIdx, (SpvmI32) imageLevel->depth, samplerInfo->addressModeW);
+  iIdx.coord = getWrappingAddress(iIdx.coord, (SpvmI32) imageLevel->width, samplerInfo->addressModeU);
+  jIdx.coord = getWrappingAddress(jIdx.coord, (SpvmI32) imageLevel->height, samplerInfo->addressModeV);
+  kIdx.coord = getWrappingAddress(kIdx.coord, (SpvmI32) imageLevel->depth, samplerInfo->addressModeW);
 
   SpvmVec4 texel;
-  if (!checkCoordinateValid(iIdx, jIdx, kIdx, imageLevel)) {
+  if (!checkCoordinateValid(iIdx.coord, jIdx.coord, kIdx.coord, imageLevel)) {
     texel = getBorderColorRGBA(samplerInfo->borderColor);
   } else {
-    SpvmWord ptrOffset = kIdx * (imageLevel->width * imageLevel->height) + jIdx * imageLevel->width + iIdx;
+    SpvmWord ptrOffset = kIdx.coord * (imageLevel->width * imageLevel->height)
+        + jIdx.coord * imageLevel->width
+        + iIdx.coord;
     SpvmByte *texelPtr = imageLevel->data + ptrOffset * getImagePixelBytesSize(imageFormat);
     texel = getImageColorRGBA(imageFormat, texelPtr);
   }
 
+  texel = vec4FMul(texel, iIdx.weight * jIdx.weight * kIdx.weight);
   return texel;
+}
+
+SpvmVec4 sampleImageNearest(SpvmImageLevel *imageLevel,
+                            SpvmVec4 uvwa,
+                            SpvmImageInfo *imageInfo,
+                            SpvmSamplerInfo *samplerInfo) {
+  SpvmImageCoord iIdx{(SpvmI32) floor(uvwa.elem[0].f32), 1.f};
+  SpvmImageCoord jIdx{(SpvmI32) floor(uvwa.elem[1].f32), 1.f};
+  SpvmImageCoord kIdx{(SpvmI32) floor(uvwa.elem[2].f32), 1.f};
+
+  return sampleImageLevel(imageLevel, iIdx, jIdx, kIdx, samplerInfo, imageInfo->format);
+}
+
+SpvmVec4 sampleImageLinear(SpvmImageLevel *imageLevel,
+                           SpvmVec4 uvwa,
+                           SpvmImageInfo *imageInfo,
+                           SpvmSamplerInfo *samplerInfo) {
+  SpvmImageCoord iIdx0{(SpvmI32) floor(uvwa.elem[0].f32 - 0.5f), 1.f};
+  SpvmImageCoord jIdx0{(SpvmI32) floor(uvwa.elem[1].f32 - 0.5f), 1.f};
+  SpvmImageCoord kIdx0{(SpvmI32) floor(uvwa.elem[2].f32 - 0.5f), 1.f};
+
+  SpvmImageCoord iIdx1 = {iIdx0.coord + 1, fract(uvwa.elem[0].f32 - 0.5f)};
+  SpvmImageCoord jIdx1 = {jIdx0.coord + 1, fract(uvwa.elem[1].f32 - 0.5f)};
+  SpvmImageCoord kIdx1 = {kIdx0.coord + 1, fract(uvwa.elem[2].f32 - 0.5f)};
+
+  iIdx0.weight = 1.f - iIdx1.weight;
+  jIdx0.weight = 1.f - jIdx1.weight;
+  kIdx0.weight = 1.f - kIdx1.weight;
+
+#define ADD_IMAGE_SAMPLE_TEXEL(i, j, k) \
+  retTexel = vec4FAdd(retTexel, sampleImageLevel(imageLevel, i, j, k, samplerInfo, imageInfo->format))
+
+  SpvmVec4 retTexel{0, 0, 0, 0};
+  switch (imageInfo->dim) {
+    case SpvDim1D: {
+      ADD_IMAGE_SAMPLE_TEXEL(iIdx0, ImageCoordNull, ImageCoordNull);
+      ADD_IMAGE_SAMPLE_TEXEL(iIdx1, ImageCoordNull, ImageCoordNull);
+      break;
+    }
+    case SpvDim2D: {
+      ADD_IMAGE_SAMPLE_TEXEL(iIdx0, jIdx0, ImageCoordNull);
+      ADD_IMAGE_SAMPLE_TEXEL(iIdx0, jIdx1, ImageCoordNull);
+      ADD_IMAGE_SAMPLE_TEXEL(iIdx1, jIdx0, ImageCoordNull);
+      ADD_IMAGE_SAMPLE_TEXEL(iIdx1, jIdx1, ImageCoordNull);
+      break;
+    }
+    case SpvDim3D: {
+      ADD_IMAGE_SAMPLE_TEXEL(iIdx0, jIdx0, kIdx0);
+      ADD_IMAGE_SAMPLE_TEXEL(iIdx0, jIdx0, kIdx1);
+      ADD_IMAGE_SAMPLE_TEXEL(iIdx0, jIdx1, kIdx0);
+      ADD_IMAGE_SAMPLE_TEXEL(iIdx0, jIdx1, kIdx1);
+      ADD_IMAGE_SAMPLE_TEXEL(iIdx1, jIdx0, kIdx0);
+      ADD_IMAGE_SAMPLE_TEXEL(iIdx1, jIdx0, kIdx1);
+      ADD_IMAGE_SAMPLE_TEXEL(iIdx1, jIdx1, kIdx0);
+      ADD_IMAGE_SAMPLE_TEXEL(iIdx1, jIdx1, kIdx1);
+      break;
+    }
+    case SpvDimCube: {
+      // TODO
+      break;
+    }
+    default:
+      break;
+  }
+
+  return retTexel;
+}
+
+SpvmVec4 sampleImageFiltered(SpvmImageLevel *imageLevel,
+                             SpvmVec4 uvwa,
+                             SpvmF32 lodLambda,
+                             SpvmImageInfo *imageInfo,
+                             SpvmSamplerInfo *samplerInfo) {
+  SpvmVec4 retTexel{0, 0, 0, 0};
+  SpvSamplerFilterMode filterMode = (lodLambda <= 0) ? samplerInfo->magFilter : samplerInfo->minFilter;
+  switch (filterMode) {
+    case SpvSamplerFilterModeNearest: {
+      retTexel = sampleImageNearest(imageLevel, uvwa, imageInfo, samplerInfo);
+      break;
+    }
+    case SpvSamplerFilterModeLinear: {
+      retTexel = sampleImageLinear(imageLevel, uvwa, imageInfo, samplerInfo);
+      break;
+    }
+    default:
+      break;
+  }
+  return retTexel;
+}
+
+SpvmWord getLodLevel(SpvmValue *sampledImage, SpvmImageOperands *operands) {
+  // TODO
+  return 0;
 }
 
 void sampleImage(SpvmValue *retValue,
@@ -404,17 +500,17 @@ void sampleImage(SpvmValue *retValue,
   }
 
   bool arrayed = sampledImage->value.sampledImage->image->type->arrayed;
-  bool depthCompared = depthCompValue && sampler->info.compareEnable;
+  bool depthCompared = (depthCompValue && sampler->info.compareEnable);
 
   // get (u,v,w,a) / (s,t,r,a)
-  SpvmVec4 uvwa = getCoordinates(coordinate, &image->info, arrayed, proj);
+  SpvmVec4 uvwa = getCoordinatesFromValue(coordinate, &image->info, arrayed, proj);
   SpvmVecElement dRef;
   if (depthCompared) {
     dRef.f32 = depthCompValue->value.f32;
   }
 
   // layer
-  SpvmI32 layerIdx = image->info.baseArrayLayer
+  SpvmI32 layerIdx = (SpvmI32) image->info.baseArrayLayer
       + sClamp((SpvmI32) roundEven(uvwa.elem[3].f32), 0, (SpvmI32) (image->info.arrayLayers - 1));
 
   // level
@@ -423,9 +519,9 @@ void sampleImage(SpvmValue *retValue,
 
   // (s,t,r) -> (u,v,w)
   if (!sampler->info.unnormalizedCoordinates) {
-    uvwa.elem[0].f32 *= imageLevel->width;
-    uvwa.elem[1].f32 *= imageLevel->height;
-    uvwa.elem[2].f32 *= imageLevel->depth;
+    uvwa.elem[0].f32 *= (SpvmF32) imageLevel->width;
+    uvwa.elem[1].f32 *= (SpvmF32) imageLevel->height;
+    uvwa.elem[2].f32 *= (SpvmF32) imageLevel->depth;
     if (depthCompared) {
       dRef.f32 /= uvwa.elem[3].f32;  // Dref = Dref / q;
     }
@@ -433,70 +529,13 @@ void sampleImage(SpvmValue *retValue,
 
   // TODO offset
 
-  // sample idx
-  SpvmI32 sampleIdx = 0;
-
   // filter
-  SpvmVec4 retTexel;
   SpvmF32 lodLambda = 0.f;
-  SpvSamplerFilterMode filterMode = (lodLambda <= 0) ? sampler->info.magFilter : sampler->info.minFilter;
-  switch (filterMode) {
-    case SpvSamplerFilterModeNearest: {
-      SpvmI32 iIdx = floor(uvwa.elem[0].f32);
-      SpvmI32 jIdx = floor(uvwa.elem[1].f32);
-      SpvmI32 kIdx = floor(uvwa.elem[2].f32);
-
-      retTexel = sampleImageLevel(imageLevel, iIdx, jIdx, kIdx, &sampler->info, image->info.format);
-      break;
-    }
-    case SpvSamplerFilterModeLinear: {
-      SpvmI32 iIdx0 = floor(uvwa.elem[0].f32 - 0.5f);
-      SpvmI32 jIdx0 = floor(uvwa.elem[1].f32 - 0.5f);
-      SpvmI32 kIdx0 = floor(uvwa.elem[2].f32 - 0.5f);
-
-      SpvmI32 iIdx1 = iIdx0 + 1;
-      SpvmI32 jIdx1 = jIdx0 + 1;
-      SpvmI32 kIdx1 = kIdx0 + 1;
-
-      SpvmF32 alpha = fract(uvwa.elem[0].f32 - 0.5f);
-      SpvmF32 beta = fract(uvwa.elem[1].f32 - 0.5f);
-      SpvmF32 gamma = fract(uvwa.elem[2].f32 - 0.5f);
-
-      switch (image->info.dim) {
-        case SpvDim1D: {
-          SpvmVec4 texel0 = sampleImageLevel(imageLevel, iIdx0, 0, 0, &sampler->info, image->info.format);
-          SpvmVec4 texel1 = sampleImageLevel(imageLevel, iIdx1, 0, 0, &sampler->info, image->info.format);
-          retTexel = vec4FMul(texel0, 1.f - alpha);
-          retTexel = vec4FAdd(retTexel, vec4FMul(texel1, alpha));
-          break;
-        }
-        case SpvDim2D: {
-          SpvmVec4 texel0 = sampleImageLevel(imageLevel, iIdx0, jIdx0, 0, &sampler->info, image->info.format);
-          SpvmVec4 texel1 = sampleImageLevel(imageLevel, iIdx1, jIdx0, 0, &sampler->info, image->info.format);
-          SpvmVec4 texel2 = sampleImageLevel(imageLevel, iIdx0, jIdx1, 0, &sampler->info, image->info.format);
-          SpvmVec4 texel3 = sampleImageLevel(imageLevel, iIdx1, jIdx1, 0, &sampler->info, image->info.format);
-          retTexel = vec4FMul(texel0, (1.f - alpha) * (1 - beta));
-          retTexel = vec4FAdd(retTexel, vec4FMul(texel1, alpha * (1 - beta)));
-          retTexel = vec4FAdd(retTexel, vec4FMul(texel2, (1.f - alpha) * beta));
-          retTexel = vec4FAdd(retTexel, vec4FMul(texel3, alpha * beta));
-          break;
-        }
-        case SpvDim3D: {
-          // TODO
-          break;
-        }
-        default:
-          break;
-      }
-      break;
-    }
-    default:
-      break;
-  }
+  SpvmVec4 retTexel = sampleImageFiltered(imageLevel, uvwa, lodLambda, &image->info, &sampler->info);
 
   // depth compare
   if (depthCompared) {
-    retTexel.elem[0] = getDepthCompare(retTexel.elem[0], dRef, sampler->info.compareOp);
+    retTexel.elem[0] = getDepthCompareResult(retTexel.elem[0], dRef, sampler->info.compareOp);
   }
 
   // write texel value to retValue
