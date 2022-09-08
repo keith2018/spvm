@@ -17,6 +17,70 @@ The project is still in progress ...
 ## Spvm-ShaderToy
 Spvm-ShaderToy implements [shader effects](https://www.shadertoy.com/) without GPU.
 
+## Example
+
+GLSL fragment shader :
+
+```glsl
+#version 450
+
+layout (location = 0) in vec3 inColor;
+layout (location = 0) out vec4 outFragColor;
+
+void main()
+{
+    outFragColor = vec4(inColor.yxz, 1.0f);
+}
+```
+
+run with spvm :
+
+```cpp
+#define HEAP_SIZE 128 * 1024
+const char *SPV_PATH = "shaders/simple.frag.spv";
+
+int main(int argc, char *argv[]) {
+  SPVM::SpvmModule module;
+  SPVM::Runtime runtime;
+
+  // decode spir-v file
+  bool success = SPVM::Decoder::decodeFile(SPV_PATH, &module);
+  if (!success) {
+    std::cout << "error decode spir-v file";
+    return -1;
+  }
+
+  // init module
+  success = runtime.initWithModule(&module, HEAP_SIZE);
+  if (!success) {
+    std::cout << "error init module";
+    return -1;
+  }
+
+  // get uniform locations
+  SPVM::SpvmWord inColorLoc = runtime.getLocationByName("inColor");
+  SPVM::SpvmWord outFragColorLoc = runtime.getLocationByName("outFragColor");
+
+  // write input
+  float inColor[3]{0.2f, 0.3f, 0.4f};
+  runtime.writeInput(inColor, inColorLoc);
+
+  // execute shader entry function 'main'
+  runtime.execEntryPoint();
+
+  // read output
+  float outFragColor[4];
+  runtime.readOutput(outFragColor, outFragColorLoc);
+
+  std::cout << "outFragColor[0]: " << outFragColor[0] << std::endl;
+  std::cout << "outFragColor[1]: " << outFragColor[1] << std::endl;
+  std::cout << "outFragColor[2]: " << outFragColor[2] << std::endl;
+  std::cout << "outFragColor[3]: " << outFragColor[3] << std::endl;
+
+  return 0;
+}
+```
+
 ## Clone
 ```bash
 git clone git@github.com:keith2018/spvm.git
