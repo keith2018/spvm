@@ -39,7 +39,11 @@ int main(int argc, char *argv[]) {
   runtime.writeInput(inColor, inColorLoc);
 
   // execute shader entry function 'main'
-  runtime.execEntryPoint();
+  success = runtime.execEntryPoint();
+  if (!success) {
+    std::cout << "error exec entrypoint function";
+    return -1;
+  }
 
   // read output
   float outFragColor[4];
