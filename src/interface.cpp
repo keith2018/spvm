@@ -17,6 +17,7 @@ void Interface::init(RuntimeContext *ctx, void **resultIds) {
   resultIds_ = resultIds;
   SpvmModule *module = ctx->module;
 
+  // init uniform location & bindings
   for (auto &pointerId : module->globalPointers) {
     SpvmPointer *pointer = (SpvmPointer *) resultIds_[pointerId];
     switch (pointer->resultType->storageClass) {
@@ -26,13 +27,13 @@ void Interface::init(RuntimeContext *ctx, void **resultIds) {
       case SpvStorageClassOutput: {
         auto it = module->decorations.find(pointerId);
         if (it != module->decorations.end()) {
-          checkDecorations(pointer, it->second);
+          checkDecorations(pointer, pointerId, it->second);
         }
 
         SpvmWord typeId = pointer->resultType->objType->resultId;
         it = module->decorations.find(typeId);
         if (it != module->decorations.end()) {
-          checkDecorations(pointer, it->second);
+          checkDecorations(pointer, pointerId, it->second);
         }
         break;
       }
@@ -44,6 +45,30 @@ void Interface::init(RuntimeContext *ctx, void **resultIds) {
         break;
     }
   }
+}
+
+SpvmWord Interface::getLocationByName(const char *name) {
+  SpvmModule *module = runtimeCtx_->module;
+  for (SpvmWord i = 0; i < module->names.size(); i++) {
+    SpvmName *nameObj = &module->names[i];
+    if (nameObj->name == name && nameObj->memberIdx == -1) {
+      return locationMap_[nameObj->targetId];
+    }
+  }
+  LOGE("getLocationByName not found: %s", name);
+  return (SpvmWord) -1;
+}
+
+SpvmUniformBinding Interface::getBindingByName(const char *name) {
+  SpvmModule *module = runtimeCtx_->module;
+  for (SpvmWord i = 0; i < module->names.size(); i++) {
+    SpvmName *nameObj = &module->names[i];
+    if (nameObj->name == name && nameObj->memberIdx == -1) {
+      return bindingMap_[nameObj->targetId];
+    }
+  }
+  LOGE("getBindingByName not found: %s", name);
+  return {(SpvmWord) -1, (SpvmWord) -1};
 }
 
 void Interface::writeInput(void *data, SpvmWord location) {
@@ -106,7 +131,7 @@ void Interface::readOutputBuiltIn(void *data, SpvBuiltIn builtIn) {
   readValue(it->second, data);
 }
 
-void Interface::checkDecorations(SpvmPointer *pointer, std::vector<SpvmDecoration> &decorations) {
+void Interface::checkDecorations(SpvmPointer *pointer, SpvmWord pointerId, std::vector<SpvmDecoration> &decorations) {
   int binding = -1;
   int set = 0;
   for (auto &dec : decorations) {
@@ -117,6 +142,7 @@ void Interface::checkDecorations(SpvmPointer *pointer, std::vector<SpvmDecoratio
         } else if (pointer->resultType->storageClass == SpvStorageClassOutput) {
           outputLocation_[dec.extra.value.location] = pointer->objPtr;
         }
+        locationMap_[pointerId] = dec.extra.value.location;
         break;
       }
       case SpvDecorationBuiltIn: {
@@ -141,6 +167,7 @@ void Interface::checkDecorations(SpvmPointer *pointer, std::vector<SpvmDecoratio
   if (binding != -1) {
     SpvmUniformBinding location = {(SpvmWord) set, (SpvmWord) binding};
     bindings_[location] = pointer->objPtr;
+    bindingMap_[pointerId] = location;
   }
 }
 

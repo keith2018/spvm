@@ -4,7 +4,11 @@ project(spvm_test)
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 add_subdirectory(googletest)
 
-add_executable(${PROJECT_NAME} main.cpp test.cpp)
+add_executable(${PROJECT_NAME} main.cpp
+        test_core.cpp
+        test_image.cpp
+        test_ext.cpp
+        )
 target_link_libraries(${PROJECT_NAME} spvm_lib gtest_main)
 
 include(GoogleTest)

@@ -56,6 +56,14 @@ class Runtime {
   bool initWithModule(SpvmModule *module, SpvmWord heapSize);
   bool execEntryPoint(SpvmWord entryIdx = 0);
 
+  inline SpvmWord getLocationByName(const char *name) {
+    return interface_.getLocationByName(name);
+  }
+
+  inline SpvmUniformBinding getBindingByName(const char *name) {
+    return interface_.getBindingByName(name);
+  }
+
   inline void writeInput(void *data, SpvmWord location) {
     interface_.writeInput(data, location);
   }
