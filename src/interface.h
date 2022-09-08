@@ -33,6 +33,9 @@ class Interface {
  public:
   void init(RuntimeContext *ctx, void **resultIds);
 
+  SpvmWord getLocationByName(const char *name);
+  SpvmUniformBinding getBindingByName(const char *name);
+
   void writeInput(void *data, SpvmWord location);
   void writeInputBuiltIn(void *data, SpvBuiltIn builtIn);
   void writeUniformBinding(void *data, SpvmWord length, SpvmWord binding, SpvmWord set = 0);
@@ -42,7 +45,7 @@ class Interface {
   void readOutputBuiltIn(void *data, SpvBuiltIn builtIn);
 
  private:
-  void checkDecorations(SpvmPointer *pointer, std::vector<SpvmDecoration> &decorations);
+  void checkDecorations(SpvmPointer *pointer, SpvmWord pointerId, std::vector<SpvmDecoration> &decorations);
   void *writeValue(SpvmValue *value, void *data, SpvmWord length);
   void *readValue(SpvmValue *value, void *data);
 
@@ -50,11 +53,14 @@ class Interface {
   RuntimeContext *runtimeCtx_;
   void **resultIds_;
 
-  std::unordered_map<SpvmWord, SpvmValue *> inputLocation_;
-  std::unordered_map<SpvmWord, SpvmValue *> outputLocation_;
-  std::unordered_map<SpvmWord, SpvmValue *> inoutBuiltIn_;
-  std::unordered_map<SpvmUniformBinding, SpvmValue *, SpvmUniformBindingHash> bindings_;
+  std::unordered_map<SpvmWord, SpvmValue *> inputLocation_;   // <Location, SpvmValue(ptr)>
+  std::unordered_map<SpvmWord, SpvmValue *> outputLocation_;  // <Location, SpvmValue(ptr)>
+  std::unordered_map<SpvmWord, SpvmValue *> inoutBuiltIn_;    // <BuiltIn, SpvmValue(ptr)>
+  std::unordered_map<SpvmUniformBinding, SpvmValue *, SpvmUniformBindingHash> bindings_;  // <Binding, SpvmValue>
   SpvmValue *pushConstants_ = nullptr;
+
+  std::unordered_map<SpvmWord, SpvmWord> locationMap_;            // <SpvmValue(ResultId), Location>
+  std::unordered_map<SpvmWord, SpvmUniformBinding> bindingMap_;   // <SpvmValue(ResultId), Binding>
 };
 
 }
