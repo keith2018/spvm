@@ -15,6 +15,8 @@ layout(location = 3) out vec4 outColorFetch;
 layout(location = 4) out vec4 outColorFetchOffset;
 layout(location = 5) out vec4 outColorSample;
 layout(location = 6) out vec4 outColorSampleGrad;
+layout(location = 7) out vec4 outColorSampleLod;
+layout(location = 8) out vec4 outColorSampleOffset;
 
 void main() {
     outQueryLod = textureQueryLod(texSampler, fragTexCoord);
@@ -26,4 +28,6 @@ void main() {
 
     outColorSample = texture(texSampler, fragTexCoord);
     outColorSampleGrad = textureGrad(texSampler, fragTexCoord, dPdx, dPdy);
+    outColorSampleLod = textureLod(texSampler, fragTexCoord, inLod);
+    outColorSampleOffset = textureOffset(texSampler, fragTexCoord, ivec2(1, 0), 0.2f);
 }

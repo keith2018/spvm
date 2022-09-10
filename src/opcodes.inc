@@ -368,7 +368,7 @@ DEF_OP_FUNC(SpvOpTypeSampler) {
 
 DEF_OP_FUNC(SpvOpTypeSampledImage) {
   PARSE_TYPE_BEGIN(SampledImage)
-  type->imageType = (SpvmTypeImage *)SPVM_TYPE(READ_WORD());
+  type->imageType = (SpvmTypeImage *) SPVM_TYPE(READ_WORD());
   PARSE_TYPE_END
   GO_NEXT
 }
@@ -472,7 +472,7 @@ DEF_OP_FUNC(SpvOpConstantSampler) {
   SpvmTypeBase *resultType = SPVM_TYPE(READ_WORD());
   SpvmWord resultId = READ_WORD();
   SpvmValue *var = CREATE_VALUE(resultType);
-  SpvmSamplerAttribute *attributes = (SpvmSamplerAttribute *)HEAP_MALLOC(sizeof(SpvmSamplerAttribute));
+  SpvmSamplerAttribute *attributes = (SpvmSamplerAttribute *) HEAP_MALLOC(sizeof(SpvmSamplerAttribute));
   attributes->addressingMode = (SpvSamplerAddressingMode) READ_WORD();
   attributes->normalized = READ_WORD();
   attributes->filterMode = (SpvSamplerFilterMode) READ_WORD();
@@ -688,85 +688,94 @@ DEF_OP_FUNC(SpvOpSampledImage) {
 
 DEF_OP_FUNC(SpvOpImageSampleImplicitLod) {
   READ_ONE_OPERAND
-  SpvmValue *coordinate = READ_OPERAND();
+  SpvmWord coordinateId = READ_WORD();
+  SpvmValue *coordinate = (SpvmValue *) ctx.resultIds[coordinateId];
   SpvmImageOperands operands = readImageOperands(&pc, ctx, opcode.wordCount - 5);
-  sampleImage(ret, operand, coordinate, &operands);
+  sampleImage(ret, operand, coordinate, coordinateId, &operands);
   ctx.resultIds[resultId] = ret;
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpImageSampleExplicitLod) {
   READ_ONE_OPERAND
-  SpvmValue *coordinate = READ_OPERAND();
+  SpvmWord coordinateId = READ_WORD();
+  SpvmValue *coordinate = (SpvmValue *) ctx.resultIds[coordinateId];
   SpvmImageOperands operands = readImageOperands(&pc, ctx, opcode.wordCount - 5);
-  sampleImage(ret, operand, coordinate, &operands);
+  sampleImage(ret, operand, coordinate, coordinateId, &operands);
   ctx.resultIds[resultId] = ret;
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpImageSampleDrefImplicitLod) {
   READ_ONE_OPERAND
-  SpvmValue *coordinate = READ_OPERAND();
+  SpvmWord coordinateId = READ_WORD();
+  SpvmValue *coordinate = (SpvmValue *) ctx.resultIds[coordinateId];
   SpvmValue *depthCompare = READ_OPERAND();
   SpvmImageOperands operands = readImageOperands(&pc, ctx, opcode.wordCount - 6);
-  sampleImage(ret, operand, coordinate, &operands, depthCompare);
+  sampleImage(ret, operand, coordinate, coordinateId, &operands, depthCompare);
   ctx.resultIds[resultId] = ret;
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpImageSampleDrefExplicitLod) {
   READ_ONE_OPERAND
-  SpvmValue *coordinate = READ_OPERAND();
+  SpvmWord coordinateId = READ_WORD();
+  SpvmValue *coordinate = (SpvmValue *) ctx.resultIds[coordinateId];
   SpvmValue *depthCompare = READ_OPERAND();
   SpvmImageOperands operands = readImageOperands(&pc, ctx, opcode.wordCount - 6);
-  sampleImage(ret, operand, coordinate, &operands, depthCompare);
+  sampleImage(ret, operand, coordinate, coordinateId, &operands, depthCompare);
   ctx.resultIds[resultId] = ret;
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpImageSampleProjImplicitLod) {
   READ_ONE_OPERAND
-  SpvmValue *coordinate = READ_OPERAND();
+  SpvmWord coordinateId = READ_WORD();
+  SpvmValue *coordinate = (SpvmValue *) ctx.resultIds[coordinateId];
   SpvmImageOperands operands = readImageOperands(&pc, ctx, opcode.wordCount - 5);
-  sampleImage(ret, operand, coordinate, &operands, nullptr, true);
+  sampleImage(ret, operand, coordinate, coordinateId, &operands, nullptr, true);
   ctx.resultIds[resultId] = ret;
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpImageSampleProjExplicitLod) {
   READ_ONE_OPERAND
-  SpvmValue *coordinate = READ_OPERAND();
+  SpvmWord coordinateId = READ_WORD();
+  SpvmValue *coordinate = (SpvmValue *) ctx.resultIds[coordinateId];
   SpvmImageOperands operands = readImageOperands(&pc, ctx, opcode.wordCount - 5);
-  sampleImage(ret, operand, coordinate, &operands, nullptr, true);
+  sampleImage(ret, operand, coordinate, coordinateId, &operands, nullptr, true);
   ctx.resultIds[resultId] = ret;
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpImageSampleProjDrefImplicitLod) {
   READ_ONE_OPERAND
-  SpvmValue *coordinate = READ_OPERAND();
+  SpvmWord coordinateId = READ_WORD();
+  SpvmValue *coordinate = (SpvmValue *) ctx.resultIds[coordinateId];
   SpvmValue *depthCompare = READ_OPERAND();
   SpvmImageOperands operands = readImageOperands(&pc, ctx, opcode.wordCount - 6);
-  sampleImage(ret, operand, coordinate, &operands, depthCompare, true);
+  sampleImage(ret, operand, coordinate, coordinateId, &operands, depthCompare, true);
   ctx.resultIds[resultId] = ret;
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpImageSampleProjDrefExplicitLod) {
   READ_ONE_OPERAND
-  SpvmValue *coordinate = READ_OPERAND();
+  SpvmWord coordinateId = READ_WORD();
+  SpvmValue *coordinate = (SpvmValue *) ctx.resultIds[coordinateId];
   SpvmValue *depthCompare = READ_OPERAND();
   SpvmImageOperands operands = readImageOperands(&pc, ctx, opcode.wordCount - 6);
-  sampleImage(ret, operand, coordinate, &operands, depthCompare, true);
+  sampleImage(ret, operand, coordinate, coordinateId, &operands, depthCompare, true);
   ctx.resultIds[resultId] = ret;
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpImageFetch) {
   READ_ONE_OPERAND
-  SpvmValue *coordinate = READ_OPERAND();
+  SpvmWord coordinateId = READ_WORD();
+  SpvmValue *coordinate = (SpvmValue *) ctx.resultIds[coordinateId];
   SpvmImageOperands operands = readImageOperands(&pc, ctx, opcode.wordCount - 5);
-  fetchImage(ret, operand, coordinate, &operands);
+  fetchImage(ret, operand, coordinate, coordinateId, &operands);
   ctx.resultIds[resultId] = ret;
   GO_NEXT
 }
@@ -838,8 +847,9 @@ DEF_OP_FUNC(SpvOpImageQuerySize) {
 
 DEF_OP_FUNC(SpvOpImageQueryLod) {
   READ_ONE_OPERAND
-  SpvmValue *coordinate = READ_OPERAND();
-  queryImageLod(ret, operand, coordinate);
+  SpvmWord coordinateId = READ_WORD();
+  SpvmValue *coordinate = (SpvmValue *) ctx.resultIds[coordinateId];
+  queryImageLod(ret, operand, coordinate, coordinateId);
   ctx.resultIds[resultId] = ret;
   GO_NEXT
 }

@@ -233,4 +233,12 @@ inline SpvmVec4 vec4FMul(SpvmVec4 a, SpvmF32 b) {
   return ret;
 }
 
+inline SpvmF32 vec4FDot(SpvmVec4 a, SpvmVec4 b) {
+  SpvmF32 ret = 0.f;
+  for (SpvmWord i = 0; i < 4; i++) {
+    ret += a.elem[i].f32 * b.elem[i].f32;
+  }
+  return ret;
+}
+
 }

@@ -160,4 +160,36 @@ void copyValue(SpvmValue *dst, SpvmValue *src) {
   }
 }
 
+void writeToValue(SpvmValue *retValue, SpvmVec4 vec) {
+  if (retValue->memberCnt == 0) {
+    retValue->value.i32 = vec.elem[0].i32;
+  } else {
+    for (SpvmWord i = 0; i < retValue->memberCnt && i < 4; i++) {
+      retValue->value.members[i]->value.i32 = vec.elem[i].i32;
+    }
+  }
+}
+
+SpvmVec4 readFromValue(SpvmValue *value) {
+  SpvmVec4 retVec{0, 0, 0, 0};
+  if (value->memberCnt > 0) {
+    for (SpvmWord i = 0; i < value->memberCnt && i < 3; i++) {
+      retVec.elem[i].f32 = value->value.members[i]->value.i32;
+    }
+  } else {
+    retVec.elem[0].f32 = value->value.i32;
+  }
+  return retVec;
+}
+
+SpvmVec4 getDPdx(SpvmWord P) {
+  // TODO
+  return {0, 0, 0, 0};
+}
+
+SpvmVec4 getDPdy(SpvmWord P) {
+  // TODO
+  return {0, 0, 0, 0};
+}
+
 }
