@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  // init module
+  // init runtime
   success = runtime.initWithModule(&module, HEAP_SIZE);
   if (!success) {
     std::cout << "error init module";

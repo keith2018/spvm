@@ -226,6 +226,7 @@ typedef struct SpvmImageOperands_ {
 
 typedef union SpvmVecElement_ {
   SpvmI32 i32;
+  SpvmU32 u32;
   SpvmF32 f32;
 } SpvmVecElement;
 

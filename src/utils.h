@@ -168,7 +168,7 @@ inline SpvmI32 findLsb(SpvmI32 x) {
   int i;
   int mask;
   int res = -1;
-  for(i = 0; i < 32; i++) {
+  for (i = 0; i < 32; i++) {
     mask = 1 << i;
     if (x & mask) {
       res = i;

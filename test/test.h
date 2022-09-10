@@ -28,6 +28,10 @@ typedef struct TestContext_ {
 
 } TestContext;
 
+#define ASSERT_VEC2_EQ(vec, v0, v1)                 \
+  ASSERT_EQ((vec)[0], v0);                          \
+  ASSERT_EQ((vec)[1], v1);                          \
+
 #define ASSERT_VEC3_EQ(vec, v0, v1, v2)             \
   ASSERT_EQ((vec)[0], v0);                          \
   ASSERT_EQ((vec)[1], v1);                          \
