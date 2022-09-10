@@ -98,6 +98,13 @@ Runtime::Runtime() : heapSize_(0), heap_(nullptr) {
   REG_OP_FUNC(SpvOpImageRead)
   REG_OP_FUNC(SpvOpImageWrite)
   REG_OP_FUNC(SpvOpImage)
+  REG_OP_FUNC(SpvOpImageQueryFormat)
+  REG_OP_FUNC(SpvOpImageQueryOrder)
+  REG_OP_FUNC(SpvOpImageQuerySizeLod)
+  REG_OP_FUNC(SpvOpImageQuerySize)
+  REG_OP_FUNC(SpvOpImageQueryLod)
+  REG_OP_FUNC(SpvOpImageQueryLevels)
+  REG_OP_FUNC(SpvOpImageQuerySamples)
 
   // Conversion Instructions
   REG_OP_FUNC(SpvOpConvertFToU)

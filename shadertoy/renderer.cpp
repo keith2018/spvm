@@ -89,8 +89,10 @@ bool Renderer::create(void *window, int width, int height, const char *shaderPat
     imageInfo.width = iw;
     imageInfo.height = ih;
     imageInfo.depth = 1;
+    imageInfo.mipmaps = true;
     imageInfo.baseMipLevel = 0;
-    imageInfo.mipLevels = 1;
+    imageInfo.mipLevels = 5;
+    imageInfo.arrayed = false;
     imageInfo.baseArrayLayer = 0;
     imageInfo.arrayLayers = 1;
     imageInfo.samples = 1;
@@ -115,10 +117,14 @@ bool Renderer::create(void *window, int width, int height, const char *shaderPat
     SPVM::uploadImageData(iChannel0Image_, pixelBytes, iw * ih * n, iw, ih, 1);
     stbi_image_free(pixelBytes);
 
+    // mipmaps
+    generateMipmaps(iChannel0Image_, SpvSamplerFilterModeLinear);
+
     // sampler
     iChannel0Sampler_ = SPVM::createSampler();
     iChannel0Sampler_->info.minFilter = SpvSamplerFilterModeLinear;
     iChannel0Sampler_->info.magFilter = SpvSamplerFilterModeLinear;
+    iChannel0Sampler_->info.mipmapMode = SpvSamplerFilterModeLinear;
 
     // sampledImage
     iChannel0SampledImage_ = SPVM::createSampledImage(iChannel0Image_, iChannel0Sampler_);

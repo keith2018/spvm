@@ -10,6 +10,8 @@
 
 namespace SPVM {
 
+#define kMaxSamplerLodBias 1024.f
+
 typedef enum SpvmFormat_ {
   SPVM_FORMAT_UNDEFINED = 0,
   SPVM_FORMAT_R8_UNORM = 9,
@@ -44,8 +46,10 @@ typedef struct SpvmImageInfo_ {
   SpvmWord width;
   SpvmWord height;
   SpvmWord depth;
+  SpvmBool mipmaps;
   SpvmWord baseMipLevel;
   SpvmWord mipLevels;
+  SpvmBool arrayed;
   SpvmWord baseArrayLayer;
   SpvmWord arrayLayers;
   SpvmWord samples;
@@ -106,8 +110,11 @@ SpvmSampler *createSamplerConstant(SpvmSamplerAttribute *attribute);
 SpvmSampledImage *createSampledImage(SpvmImage *image, SpvmSampler *sampler);
 
 bool uploadImageData(SpvmImage *image, SpvmByte *dataPtr, SpvmWord dataSize,
-                     SpvmWord width, SpvmWord height, SpvmWord depth,
+                     SpvmWord width, SpvmWord height, SpvmWord depth = 1,
                      SpvmWord mipLevel = 0, SpvmWord arrayLayer = 0);
+
+void generateMipmaps(SpvmImage *image, SpvSamplerFilterMode filterMode);
+void generateMipmaps(SpvmSampledImage *sampledImage);
 
 void destroyImage(SpvmImage *image);
 void destroySampler(SpvmSampler *sampler);
@@ -116,10 +123,23 @@ void destroySampledImager(SpvmSampledImage *sampledImage);
 bool checkImageType(SpvmImage *image, SpvmTypeImage *type);
 
 void sampleImage(SpvmValue *retValue,
-                 SpvmValue *sampledImage,
-                 SpvmValue *coordinate,
+                 SpvmValue *sampledImageValue,
+                 SpvmValue *coordinateValue,
                  SpvmImageOperands *operands,
                  SpvmValue *depthCompValue = nullptr,
                  bool proj = false);
+
+void fetchImage(SpvmValue *retValue,
+                SpvmValue *imageValue,
+                SpvmValue *coordinateValue,
+                SpvmImageOperands *operands);
+
+void queryImageFormat(SpvmValue *retValue, SpvmValue *imageValue);
+void queryImageOrder(SpvmValue *retValue, SpvmValue *imageValue);
+void queryImageSizeLod(SpvmValue *retValue, SpvmValue *imageValue, SpvmValue *lodValue);
+void queryImageSize(SpvmValue *retValue, SpvmValue *imageValue);
+void queryImageLod(SpvmValue *retValue, SpvmValue *sampledImageValue, SpvmValue *coordinateValue);
+void queryImageLevels(SpvmValue *retValue, SpvmValue *imageValue);
+void queryImageSamples(SpvmValue *retValue, SpvmValue *imageValue);
 
 }

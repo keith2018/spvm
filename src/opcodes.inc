@@ -763,8 +763,11 @@ DEF_OP_FUNC(SpvOpImageSampleProjDrefExplicitLod) {
 }
 
 DEF_OP_FUNC(SpvOpImageFetch) {
-  SKIP_WORD_N(opcode.wordCount - 1);
-  LOGW("not implement: %s", spvmOpString(opcode.op));
+  READ_ONE_OPERAND
+  SpvmValue *coordinate = READ_OPERAND();
+  SpvmImageOperands operands = readImageOperands(&pc, ctx, opcode.wordCount - 5);
+  fetchImage(ret, operand, coordinate, &operands);
+  ctx.resultIds[resultId] = ret;
   GO_NEXT
 }
 
@@ -800,6 +803,57 @@ DEF_OP_FUNC(SpvOpImage) {
   ret->type = resultType;
   ret->memberCnt = resultType->memberCnt;
   ret->value.image = sampledImage->value.sampledImage->image;
+  ctx.resultIds[resultId] = ret;
+  GO_NEXT
+}
+
+DEF_OP_FUNC(SpvOpImageQueryFormat) {
+  READ_ONE_OPERAND
+  queryImageFormat(ret, operand);
+  ctx.resultIds[resultId] = ret;
+  GO_NEXT
+}
+
+DEF_OP_FUNC(SpvOpImageQueryOrder) {
+  READ_ONE_OPERAND
+  queryImageOrder(ret, operand);
+  ctx.resultIds[resultId] = ret;
+  GO_NEXT
+}
+
+DEF_OP_FUNC(SpvOpImageQuerySizeLod) {
+  READ_ONE_OPERAND
+  SpvmValue *lod = READ_OPERAND();
+  queryImageSizeLod(ret, operand, lod);
+  ctx.resultIds[resultId] = ret;
+  GO_NEXT
+}
+
+DEF_OP_FUNC(SpvOpImageQuerySize) {
+  READ_ONE_OPERAND
+  queryImageSize(ret, operand);
+  ctx.resultIds[resultId] = ret;
+  GO_NEXT
+}
+
+DEF_OP_FUNC(SpvOpImageQueryLod) {
+  READ_ONE_OPERAND
+  SpvmValue *coordinate = READ_OPERAND();
+  queryImageLod(ret, operand, coordinate);
+  ctx.resultIds[resultId] = ret;
+  GO_NEXT
+}
+
+DEF_OP_FUNC(SpvOpImageQueryLevels) {
+  READ_ONE_OPERAND
+  queryImageLevels(ret, operand);
+  ctx.resultIds[resultId] = ret;
+  GO_NEXT
+}
+
+DEF_OP_FUNC(SpvOpImageQuerySamples) {
+  READ_ONE_OPERAND
+  queryImageSamples(ret, operand);
   ctx.resultIds[resultId] = ret;
   GO_NEXT
 }

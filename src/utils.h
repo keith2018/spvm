@@ -168,7 +168,7 @@ inline SpvmI32 findLsb(SpvmI32 x) {
   int i;
   int mask;
   int res = -1;
-  for(i = 0; i < 32; i++) {
+  for (i = 0; i < 32; i++) {
     mask = 1 << i;
     if (x & mask) {
       res = i;
@@ -229,6 +229,27 @@ inline SpvmVec4 vec4FMul(SpvmVec4 a, SpvmF32 b) {
   SpvmVec4 ret;
   for (SpvmWord i = 0; i < 4; i++) {
     ret.elem[i].f32 = a.elem[i].f32 * b;
+  }
+  return ret;
+}
+
+inline SpvmI32 roundUpPow2(SpvmI32 n, SpvmI32 max) {
+  n -= 1;
+  n |= n >> 1;
+  n |= n >> 2;
+  n |= n >> 4;
+  n |= n >> 8;
+  n |= n >> 16;
+  return n < 0 ? 1 : (n >= max ? max : n + 1);
+}
+
+inline SpvmU32 uLog2(SpvmU32 n) {
+  if (n == 0) return UINT_MAX;
+  if (n == 1) return 0;
+  SpvmU32 ret = 0;
+  while (n > 1) {
+    n >>= 1;
+    ret++;
   }
   return ret;
 }
