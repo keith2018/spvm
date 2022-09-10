@@ -84,7 +84,7 @@ SpvmSampler *createSampler(SpvmSamplerInfo *samplerInfo) {
     ret->info.compareEnable = false;
     ret->info.compareOp = SPVM_COMPARE_OP_NEVER;
     ret->info.minLod = 0.f;
-    ret->info.maxLod = 0.f;
+    ret->info.maxLod = kMaxSamplerLod;
     ret->info.borderColor = SPVM_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
     ret->info.unnormalizedCoordinates = false;
   }
@@ -103,7 +103,7 @@ SpvmSampler *createSamplerConstant(SpvmSamplerAttribute *attribute) {
   ret->info.compareEnable = false;
   ret->info.compareOp = SPVM_COMPARE_OP_NEVER;
   ret->info.minLod = 0.f;
-  ret->info.maxLod = 0.f;
+  ret->info.maxLod = kMaxSamplerLod;
   ret->info.borderColor = SPVM_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
   ret->info.unnormalizedCoordinates = !attribute->normalized;
   return ret;
@@ -536,9 +536,15 @@ SpvmVec4 sampleImageLayerLod(SpvmImageLayer *imageLayer,
                              SpvmWord level,
                              SpvmVec4 uvwa,
                              SpvSamplerFilterMode filterMode,
+                             SpvmImageOperands *operands,
                              SpvmImageInfo *imageInfo,
                              SpvmSamplerInfo *samplerInfo) {
   SpvmImageLevel *imageLevel = &imageLayer->levels[level];
+
+  if (imageLevel->width <= 0 || imageLevel->height <= 0 || imageLevel->data == nullptr) {
+    LOGE("image level not uploaded with pixel data");
+    return {0, 0, 0, 0};
+  }
 
   // (s,t,r) -> (u,v,w)
   if (!samplerInfo->unnormalizedCoordinates) {
@@ -547,7 +553,11 @@ SpvmVec4 sampleImageLayerLod(SpvmImageLayer *imageLayer,
     uvwa.elem[2].f32 *= (SpvmF32) imageLevel->depth;
   }
 
-  // TODO offset
+  // add offset
+  if (operands && operands->offset) {
+    SpvmVec4 offset = readFromValue(operands->offset);
+    uvwa = vec4FAdd(uvwa, offset);
+  }
 
   return sampleImageFiltered(imageLevel, uvwa, filterMode, imageInfo, samplerInfo);
 }
@@ -599,21 +609,35 @@ void generateMipmaps(SpvmSampledImage *sampledImage) {
   generateMipmaps(sampledImage->image, sampledImage->sampler->info.mipmapMode);
 }
 
-// ρ_max
-SpvmF32 getDerivativeRhoMax(SpvmImageOperands *operands) {
-  // TODO
+// calculate ρ_max
+SpvmF32 getDerivativeRhoMax(SpvmWord coordinateId, SpvmImageOperands *operands, SpvmImageInfo *imageInfo) {
+  SpvmVec4 mx{0, 0, 0, 0};
+  SpvmVec4 my{0, 0, 0, 0};
   if (operands && operands->dx && operands->dy) {
-
+    mx = readFromValue(operands->dx);
+    my = readFromValue(operands->dy);
+  } else {
+    mx = getDPdx(coordinateId);
+    my = getDPdy(coordinateId);
   }
-  return 0.f;
+
+  SpvmVec4 sizeInfo = {(SpvmI32) imageInfo->width, (SpvmI32) imageInfo->height, (SpvmI32) imageInfo->depth, 0};
+  for (SpvmWord i = 0; i < 4; i++) {
+    mx.elem[i].f32 *= (SpvmF32) sizeInfo.elem[i].i32;
+    my.elem[i].f32 *= (SpvmF32) sizeInfo.elem[i].i32;
+  }
+
+  SpvmF32 rhoX = sqrt(vec4FDot(mx, mx));
+  SpvmF32 rhoY = sqrt(vec4FDot(my, my));
+  return fMax(rhoX, rhoY);
 }
 
-SpvmF32 getLodLambda(SpvmImage *image, SpvmSampler *sampler, SpvmImageOperands *operands) {
+SpvmF32 getLodLambda(SpvmImage *image, SpvmSampler *sampler, SpvmWord coordinateId, SpvmImageOperands *operands) {
   SpvmF32 lambdaBase = 0.f;
   if (operands && operands->lod) {
     lambdaBase = operands->lod->value.f32;
   } else {
-    lambdaBase = log2f(getDerivativeRhoMax(operands));   // isotropic, η = 1
+    lambdaBase = log2f(getDerivativeRhoMax(coordinateId, operands, &image->info));   // isotropic, η = 1
   }
   SpvmF32 samplerBias = sampler->info.mipLodBias;
   SpvmF32 shaderOpBias = (operands && operands->bias) ? operands->bias->value.f32 : 0.f;
@@ -700,19 +724,10 @@ SpvmVec4 getImageSize(SpvmImage *image) {
   return ret;
 }
 
-void writeVecToValue(SpvmValue *retValue, SpvmVec4 vec) {
-  if (retValue->memberCnt == 0) {
-    retValue->value.i32 = vec.elem[0].i32;
-  } else {
-    for (SpvmWord i = 0; i < retValue->memberCnt && i < 4; i++) {
-      retValue->value.members[i]->value.i32 = vec.elem[i].i32;
-    }
-  }
-}
-
 void sampleImage(SpvmValue *retValue,
                  SpvmValue *sampledImageValue,
                  SpvmValue *coordinateValue,
+                 SpvmWord coordinateId,
                  SpvmImageOperands *operands,
                  SpvmValue *depthCompValue,
                  bool proj) {
@@ -744,20 +759,20 @@ void sampleImage(SpvmValue *retValue,
   SpvmVec4 retTexel;
 
   // lod & level
-  SpvmF32 lodLambda = getLodLambda(image, sampler, operands);
+  SpvmF32 lodLambda = getLodLambda(image, sampler, coordinateId, operands);
   SpvmF32 lodLevel = getComputeAccessedLod(image, sampler, lodLambda);
   SpvSamplerFilterMode filterMode = (lodLambda <= 0) ? sampler->info.magFilter : sampler->info.minFilter;
 
   if (sampler->info.mipmapMode == SpvSamplerFilterModeNearest) {
     SpvmWord level = (SpvmWord) lodLevel;
-    retTexel = sampleImageLayerLod(imageLayer, level, uvwa, filterMode, &image->info, &sampler->info);
+    retTexel = sampleImageLayerLod(imageLayer, level, uvwa, filterMode, operands, &image->info, &sampler->info);
   } else {
     SpvmF32 levelHi = floor(lodLevel);
     SpvmF32 levelLo = fMin(levelHi + 1, image->info.baseMipLevel + image->info.mipLevels - 1);
     SpvmF32 delta = lodLevel - levelHi;
-    SpvmVec4 texelHi = sampleImageLayerLod(imageLayer, (SpvmWord) levelHi, uvwa, filterMode,
+    SpvmVec4 texelHi = sampleImageLayerLod(imageLayer, (SpvmWord) levelHi, uvwa, filterMode, operands,
                                            &image->info, &sampler->info);
-    SpvmVec4 texelLo = sampleImageLayerLod(imageLayer, (SpvmWord) levelLo, uvwa, filterMode,
+    SpvmVec4 texelLo = sampleImageLayerLod(imageLayer, (SpvmWord) levelLo, uvwa, filterMode, operands,
                                            &image->info, &sampler->info);
     retTexel = vec4FMul(texelHi, 1.f - delta);
     retTexel = vec4FAdd(retTexel, vec4FMul(texelLo, delta));
@@ -769,12 +784,13 @@ void sampleImage(SpvmValue *retValue,
   }
 
   // write texel value to retValue
-  writeVecToValue(retValue, retTexel);
+  writeToValue(retValue, retTexel);
 }
 
 void fetchImage(SpvmValue *retValue,
                 SpvmValue *imageValue,
                 SpvmValue *coordinateValue,
+                SpvmWord coordinateId,
                 SpvmImageOperands *operands) {
   // TODO
 }
@@ -836,7 +852,7 @@ void queryImageSizeLod(SpvmValue *retValue, SpvmValue *imageValue, SpvmValue *lo
     return;
   }
   SpvmVec4 sizeInfo = getImageSizeLod(image, lodValue->value.i32);
-  writeVecToValue(retValue, sizeInfo);
+  writeToValue(retValue, sizeInfo);
 }
 
 void queryImageSize(SpvmValue *retValue, SpvmValue *imageValue) {
@@ -846,11 +862,22 @@ void queryImageSize(SpvmValue *retValue, SpvmValue *imageValue) {
     return;
   }
   SpvmVec4 sizeInfo = getImageSize(image);
-  writeVecToValue(retValue, sizeInfo);
+  writeToValue(retValue, sizeInfo);
 }
 
-void queryImageLod(SpvmValue *retValue, SpvmValue *sampledImageValue, SpvmValue *coordinateValue) {
-  // TODO
+void queryImageLod(SpvmValue *retValue, SpvmValue *sampledImageValue,
+                   SpvmValue *coordinateValue,
+                   SpvmWord coordinateId) {
+  SpvmImage *image = (SpvmImage *) sampledImageValue->value.sampledImage->image->opaque;
+  SpvmSampler *sampler = (SpvmSampler *) sampledImageValue->value.sampledImage->sampler->opaque;
+  if (!image || !sampler) {
+    LOGE("queryImageLod error: image or sampler is null");
+    return;
+  }
+  SpvmF32 lodLambda = getLodLambda(image, sampler, coordinateId, nullptr);
+  SpvmF32 lodLevel = getComputeAccessedLod(image, sampler, lodLambda);
+  retValue->value.members[0]->value.f32 = lodLambda;
+  retValue->value.members[1]->value.f32 = lodLevel;
 }
 
 void queryImageLevels(SpvmValue *retValue, SpvmValue *imageValue) {

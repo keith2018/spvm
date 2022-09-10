@@ -10,7 +10,8 @@
 
 namespace SPVM {
 
-#define kMaxSamplerLodBias 1024.f
+#define kMaxSamplerLodBias 64.f
+#define kMaxSamplerLod 64.f
 
 typedef enum SpvmFormat_ {
   SPVM_FORMAT_UNDEFINED = 0,
@@ -125,6 +126,7 @@ bool checkImageType(SpvmImage *image, SpvmTypeImage *type);
 void sampleImage(SpvmValue *retValue,
                  SpvmValue *sampledImageValue,
                  SpvmValue *coordinateValue,
+                 SpvmWord coordinateId,
                  SpvmImageOperands *operands,
                  SpvmValue *depthCompValue = nullptr,
                  bool proj = false);
@@ -132,13 +134,15 @@ void sampleImage(SpvmValue *retValue,
 void fetchImage(SpvmValue *retValue,
                 SpvmValue *imageValue,
                 SpvmValue *coordinateValue,
+                SpvmWord coordinateId,
                 SpvmImageOperands *operands);
 
 void queryImageFormat(SpvmValue *retValue, SpvmValue *imageValue);
 void queryImageOrder(SpvmValue *retValue, SpvmValue *imageValue);
 void queryImageSizeLod(SpvmValue *retValue, SpvmValue *imageValue, SpvmValue *lodValue);
 void queryImageSize(SpvmValue *retValue, SpvmValue *imageValue);
-void queryImageLod(SpvmValue *retValue, SpvmValue *sampledImageValue, SpvmValue *coordinateValue);
+void queryImageLod(SpvmValue *retValue, SpvmValue *sampledImageValue,
+                   SpvmValue *coordinateValue, SpvmWord coordinateId);
 void queryImageLevels(SpvmValue *retValue, SpvmValue *imageValue);
 void queryImageSamples(SpvmValue *retValue, SpvmValue *imageValue);
 

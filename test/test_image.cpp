@@ -47,6 +47,9 @@ static uint8_t pixelBytes2D[] = {255, 0, 0, 255, 0, 255, 0, 255,
                                  255, 0, 0, 255, 255, 0, 0, 255,
                                  255, 0, 0, 255, 255, 0, 0, 255,};
 
+static uint8_t pixelBytes2D_mip[] = {128, 0, 0, 128, 0, 128, 0, 128,
+                                     0, 0, 128, 255, 0, 0, 0, 128,};
+
 TEST(TEST_SPV_EXEC, image_2d_query_frag) {
   TestContext ctx;
   ASSERT_TRUE(ctx.decode("assets/image.frag.spv"));
@@ -64,12 +67,12 @@ TEST(TEST_SPV_EXEC, image_2d_query_frag) {
   SPVM::SpvmWord outTexLevelLoc = ctx.runtime.getLocationByName("outTexLevel");
 
   // textureQueryLod
-//  float fragTexCoord[2]{0.f, 0.f};
-//  float outQueryLod[2];
-//  ctx.runtime.writeInput(fragTexCoord, 0);
-//  ASSERT_TRUE(ctx.runtime.execEntryPoint());
-//  ctx.runtime.readOutput(&outQueryLod, outQueryLodLoc);
-//  ASSERT_VEC2_EQ(outQueryLod, 1.f, 0.f);
+  float fragTexCoord[2]{0.f, 0.f};
+  float outQueryLod[2];
+  ctx.runtime.writeInput(fragTexCoord, 0);
+  ASSERT_TRUE(ctx.runtime.execEntryPoint());
+  ctx.runtime.readOutput(&outQueryLod, outQueryLodLoc);
+  ASSERT_VEC2_EQ(outQueryLod, 0.f, 0.f);
 
   // textureSize
   int32_t inLod[1]{0};
@@ -99,15 +102,17 @@ TEST(TEST_SPV_EXEC, image_2d_lookup_frag) {
   ASSERT_TRUE(ctx.init());
 
   ImageContext imageCtx;
-  imageCtx.create2d(4, 4);
-  SPVM::uploadImageData(imageCtx.spvmImage, pixelBytes2D, sizeof(pixelBytes2D), 4, 4);
+  imageCtx.create2d(4, 4, 2);
   imageCtx.spvmSampler->info.unnormalizedCoordinates = true;
+  imageCtx.spvmSampler->info.mipmapMode = SpvSamplerFilterModeLinear;
+  SPVM::uploadImageData(imageCtx.spvmImage, pixelBytes2D, sizeof(pixelBytes2D), 4, 4, 1, 0);
+  SPVM::uploadImageData(imageCtx.spvmImage, pixelBytes2D_mip, sizeof(pixelBytes2D_mip), 2, 2, 1, 1);
   ctx.runtime.writeUniformBinding(imageCtx.spvmSampledImage, 0, 0, 0);
 
+  float fragTexCoord[2]{0.f, 0.f};
   SPVM::SpvmWord outLoc = ctx.runtime.getLocationByName("outColorSample");
 
   // texture
-  float fragTexCoord[2]{0.f, 0.f};
   float outColorSample[4];
   ctx.runtime.writeInput(fragTexCoord, 0);
   ASSERT_TRUE(ctx.runtime.execEntryPoint());
@@ -148,8 +153,29 @@ TEST(TEST_SPV_EXEC, image_2d_lookup_frag) {
   ctx.runtime.readOutput(&outColorSample, outLoc);
   ASSERT_VEC4_EQ(outColorSample, 0.f, 0.f, 1.f, 1.f);
 
-  // textureGrad
-  // TODO
+  // textureGrad TODO
+
+  // textureLod
+  int32_t inLod[1]{1};
+  fragTexCoord[0] = 0.f;
+  fragTexCoord[1] = 0.f;
+  ctx.runtime.writeInput(inLod, 1);
+  ctx.runtime.writeInput(fragTexCoord, 0);
+  ASSERT_TRUE(ctx.runtime.execEntryPoint());
+  outLoc = ctx.runtime.getLocationByName("outColorSampleLod");
+  float outColorSampleLod[4];
+  ctx.runtime.readOutput(&outColorSampleLod, outLoc);
+  ASSERT_VEC4_EQ(outColorSampleLod, 128.f / 255.f, 0.f, 0.f, 128.f / 255.f);
+
+  // textureOffset
+  fragTexCoord[0] = 0.f;
+  fragTexCoord[1] = 0.f;
+  ctx.runtime.writeInput(fragTexCoord, 0);
+  ASSERT_TRUE(ctx.runtime.execEntryPoint());
+  outLoc = ctx.runtime.getLocationByName("outColorSampleOffset");
+  float outColorSampleOffset[4];
+  ctx.runtime.readOutput(&outColorSampleOffset, outLoc);
+  ASSERT_VEC4_EQ(outColorSampleOffset, 0.f, 1.f, 0.f, 1.f);
 
   imageCtx.destroy();
 }

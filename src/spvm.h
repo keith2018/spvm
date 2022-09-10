@@ -245,5 +245,9 @@ typedef struct SpvmVec4_ {
 SpvmValue *createValue(SpvmTypeBase *type, SpvmByte **psp);
 void copyValue(SpvmValue *dst, SpvmValue *src);
 SpvmWord getTypeSize(SpvmTypeBase *type);
+void writeToValue(SpvmValue *retValue, SpvmVec4 vec);
+SpvmVec4 readFromValue(SpvmValue *value);
+SpvmVec4 getDPdx(SpvmWord P);
+SpvmVec4 getDPdy(SpvmWord P);
 
 }
