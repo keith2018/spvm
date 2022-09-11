@@ -368,7 +368,7 @@ SpvmVec4 getCoordinatesFromValue(SpvmValue *coordinate, SpvmImageInfo *imageInfo
       uvwa.elem[i].f32 = coordinate->value.members[i]->value.f32;
     }
     // q
-    if (arrayed && coordinate->memberCnt > coordCnt) {
+    if (proj && coordinate->memberCnt > coordCnt) {
       SpvmF32 q = coordinate->value.members[coordCnt]->value.f32;
       uvwa.elem[3].f32 = q;
       for (SpvmWord i = 0; i < coordCnt; i++) {
@@ -376,7 +376,7 @@ SpvmVec4 getCoordinatesFromValue(SpvmValue *coordinate, SpvmImageInfo *imageInfo
       }
     }
     // a
-    if (proj && coordinate->memberCnt > coordCnt) {
+    if (arrayed && coordinate->memberCnt > coordCnt) {
       uvwa.elem[3].f32 = coordinate->value.members[coordCnt]->value.f32;
     }
   }
@@ -539,7 +539,7 @@ SpvmVec4 sampleImageLayerLod(SpvmImageLayer *imageLayer,
                              SpvmImageOperands *operands,
                              SpvmImageInfo *imageInfo,
                              SpvmSamplerInfo *samplerInfo) {
-  SpvmImageLevel *imageLevel = &imageLayer->levels[level];
+  SpvmImageLevel *imageLevel = &imageLayer->levels[level - imageInfo->baseMipLevel];
 
   if (imageLevel->width <= 0 || imageLevel->height <= 0 || imageLevel->data == nullptr) {
     LOGE("image level not uploaded with pixel data");
@@ -556,7 +556,9 @@ SpvmVec4 sampleImageLayerLod(SpvmImageLayer *imageLayer,
   // add offset
   if (operands && operands->offset) {
     SpvmVec4 offset = readFromValue(operands->offset);
-    uvwa = vec4FAdd(uvwa, offset);
+    for (SpvmWord i = 0; i < 4; i++) {
+      uvwa.elem[i].f32 += (SpvmF32) offset.elem[i].i32;
+    }
   }
 
   return sampleImageFiltered(imageLevel, uvwa, filterMode, imageInfo, samplerInfo);
@@ -751,11 +753,12 @@ void sampleImage(SpvmValue *retValue,
   }
 
   // layer
-  SpvmI32 layerIdx = image->info.baseArrayLayer;
+  SpvmI32 layerIdx = (SpvmI32) image->info.baseArrayLayer;
   if (sampler->info.unnormalizedCoordinates) {
-    layerIdx += sClamp((SpvmI32) roundEven(uvwa.elem[3].f32), 0, (SpvmI32) (image->info.arrayLayers - 1));
+    layerIdx = sClamp((SpvmI32) roundEven(uvwa.elem[3].f32), (SpvmI32) image->info.baseArrayLayer,
+                      (SpvmI32) (image->info.baseArrayLayer + image->info.arrayLayers - 1));
   }
-  SpvmImageLayer *imageLayer = &image->layers[layerIdx];
+  SpvmImageLayer *imageLayer = &image->layers[layerIdx - (SpvmI32) image->info.baseArrayLayer];
   SpvmVec4 retTexel;
 
   // lod & level
@@ -792,7 +795,44 @@ void fetchImage(SpvmValue *retValue,
                 SpvmValue *coordinateValue,
                 SpvmWord coordinateId,
                 SpvmImageOperands *operands) {
-  // TODO
+  SpvmImage *image = (SpvmImage *) imageValue->value.image->opaque;
+  if (!image) {
+    LOGE("fetchImage error: image is null");
+    return;
+  }
+  // uvwa
+  SpvmVec4 uvwa = getCoordinatesFromValue(coordinateValue, &image->info, image->info.arrayed, false);
+  // layer
+  SpvmI32 layerIdx = sClamp((SpvmI32) uvwa.elem[3].i32, (SpvmI32) image->info.baseArrayLayer,
+                            (SpvmI32) (image->info.baseArrayLayer + image->info.arrayLayers - 1));
+  SpvmImageLayer *imageLayer = &image->layers[layerIdx];
+
+  // level
+  SpvmI32 level = image->info.baseMipLevel;
+  if (operands && operands->lod) {
+    level = sClamp(operands->lod->value.i32, image->info.baseMipLevel,
+                   image->info.baseMipLevel + image->info.mipLevels - 1);
+  }
+  SpvmImageLevel *imageLevel = &imageLayer->levels[level - image->info.baseMipLevel];
+  if (imageLevel->width <= 0 || imageLevel->height <= 0 || imageLevel->data == nullptr) {
+    LOGE("image level not uploaded with pixel data");
+    return;
+  }
+
+  // add offset
+  if (operands && operands->offset) {
+    SpvmVec4 offset = readFromValue(operands->offset);
+    for (SpvmWord i = 0; i < 4; i++) {
+      uvwa.elem[i].i32 += offset.elem[i].i32;
+    }
+  }
+
+  SpvmByte *texelPtr = pixelDataPtr(imageLevel, uvwa.elem[0].i32, uvwa.elem[1].i32, uvwa.elem[2].i32,
+                                    image->info.format);
+  SpvmVec4 retTexel = readPixelColorRGBA(image->info.format, texelPtr);
+
+  // write texel value to retValue
+  writeToValue(retValue, retTexel);
 }
 
 void queryImageFormat(SpvmValue *retValue, SpvmValue *imageValue) {
