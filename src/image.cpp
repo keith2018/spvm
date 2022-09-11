@@ -500,11 +500,8 @@ SpvmVec4 sampleImageLinear(SpvmImageLevel *imageLevel,
       ADD_IMAGE_SAMPLE_TEXEL(iIdx1, jIdx1, kIdx1);
       break;
     }
-    case SpvDimCube: {
-      // TODO
-      break;
-    }
     default:
+      LOGE("sample image error: dim not support");
       break;
   }
 
