@@ -174,10 +174,10 @@ SpvmVec4 readFromValue(SpvmValue *value) {
   SpvmVec4 retVec{0, 0, 0, 0};
   if (value->memberCnt > 0) {
     for (SpvmWord i = 0; i < value->memberCnt && i < 3; i++) {
-      retVec.elem[i].f32 = value->value.members[i]->value.i32;
+      retVec.elem[i].i32 = value->value.members[i]->value.i32;
     }
   } else {
-    retVec.elem[0].f32 = value->value.i32;
+    retVec.elem[0].i32 = value->value.i32;
   }
   return retVec;
 }

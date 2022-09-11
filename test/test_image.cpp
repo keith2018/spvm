@@ -58,8 +58,9 @@ TEST(TEST_SPV_EXEC, image_2d_query_frag) {
   ImageContext imageCtx;
   imageCtx.create2d(4, 4, 2);
   imageCtx.spvmSampler->info.unnormalizedCoordinates = true;
-  SPVM::uploadImageData(imageCtx.spvmImage, pixelBytes2D, sizeof(pixelBytes2D), 4, 4);
-  SPVM::generateMipmaps(imageCtx.spvmSampledImage);
+  imageCtx.spvmSampler->info.mipmapMode = SpvSamplerFilterModeLinear;
+  SPVM::uploadImageData(imageCtx.spvmImage, pixelBytes2D, sizeof(pixelBytes2D), 4, 4, 1, 0);
+  SPVM::uploadImageData(imageCtx.spvmImage, pixelBytes2D_mip, sizeof(pixelBytes2D_mip), 2, 2, 1, 1);
   ctx.runtime.writeUniformBinding(imageCtx.spvmSampledImage, 0, 0, 0);
 
   SPVM::SpvmWord outQueryLodLoc = ctx.runtime.getLocationByName("outQueryLod");
@@ -92,6 +93,42 @@ TEST(TEST_SPV_EXEC, image_2d_query_frag) {
   int32_t outTexLevel[1];
   ctx.runtime.readOutput(&outTexLevel, outTexLevelLoc);
   ASSERT_EQ(outTexLevel[0], 2);
+
+  imageCtx.destroy();
+}
+
+TEST(TEST_SPV_EXEC, image_2d_fetch_frag) {
+  TestContext ctx;
+  ASSERT_TRUE(ctx.decode("assets/image.frag.spv"));
+  ASSERT_TRUE(ctx.init());
+
+  ImageContext imageCtx;
+  imageCtx.create2d(4, 4, 2);
+  imageCtx.spvmSampler->info.unnormalizedCoordinates = true;
+  imageCtx.spvmSampler->info.mipmapMode = SpvSamplerFilterModeLinear;
+  SPVM::uploadImageData(imageCtx.spvmImage, pixelBytes2D, sizeof(pixelBytes2D), 4, 4, 1, 0);
+  SPVM::uploadImageData(imageCtx.spvmImage, pixelBytes2D_mip, sizeof(pixelBytes2D_mip), 2, 2, 1, 1);
+  ctx.runtime.writeUniformBinding(imageCtx.spvmSampledImage, 0, 0, 0);
+
+  SPVM::SpvmWord outColorFetchLoc = ctx.runtime.getLocationByName("outColorFetch");
+  SPVM::SpvmWord outColorFetchOffsetLoc = ctx.runtime.getLocationByName("outColorFetchOffset");
+
+  int32_t inLod[1]{1};
+  int32_t fragTexCoord[2]{0, 0};
+
+  // texelFetch
+  ctx.runtime.writeInput(fragTexCoord, 0);
+  ctx.runtime.writeInput(inLod, 1);
+  ASSERT_TRUE(ctx.runtime.execEntryPoint());
+  float outColorFetch[4];
+  ctx.runtime.readOutput(&outColorFetch, outColorFetchLoc);
+  ASSERT_VEC4_EQ(outColorFetch, 128.f / 255.f, 0.f, 0.f, 128.f / 255.f);
+
+  // texelFetchOffset
+  ASSERT_TRUE(ctx.runtime.execEntryPoint());
+  float outColorFetchOffset[4];
+  ctx.runtime.readOutput(&outColorFetchOffset, outColorFetchOffsetLoc);
+  ASSERT_VEC4_EQ(outColorFetchOffset, 0.f, 0.f, 0.f, 128.f / 255.f);
 
   imageCtx.destroy();
 }
