@@ -9,7 +9,7 @@
 #define REG_GLSL_OP_FUNC(op) ins[GLSLstd450##op] = (void*)func_GLSLstd450##op;
 #define DEF_GLSL_OP_FUNC(op) DEF_OP_FUNC(GLSLstd450##op)
 
-static void func_GLSLstd450_NotSupport(SpvmWord *pc, SpvmByte *sp, SpvmOpcode opcode, RuntimeContext *ctx) {
+static RuntimeResult func_GLSLstd450_NotSupport(SpvmWord *pc, SpvmByte *sp, SpvmOpcode opcode, RuntimeContext *ctx) {
   LOGE("GLSL.std.450 Instruction not support, skip. opcode: %s, size: %d", spvmOpString(opcode.op), opcode.wordCount);
   SKIP_WORD_N(opcode.wordCount - 1);
   GO_NEXT

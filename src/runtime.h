@@ -10,6 +10,8 @@
 #include "module.h"
 #include "interface.h"
 
+#define SPVM_OP_DISPATCH_TAIL_CALL
+
 namespace SPVM {
 
 typedef struct SpvmFrame {
@@ -25,7 +27,7 @@ typedef struct SpvmFrame {
 class Runtime;
 
 typedef enum {
-  Result_UNKNOWN = 0,
+  Result_NoError = 0,
   Result_Unreachable,
   Result_Killed,
   Result_Error,
@@ -35,7 +37,6 @@ typedef enum {
 
 typedef struct RuntimeContext {
   bool inited;
-  RuntimeResult ret;
   Runtime *runtime;
   SpvmModule *module;
   void **resultIds;
@@ -82,7 +83,7 @@ class Runtime {
   }
 
  private:
-  void invokeFunction(SpvmWord funcId);
+  RuntimeResult invokeFunction(SpvmWord funcId);
 
  private:
   RuntimeContext ctx_;

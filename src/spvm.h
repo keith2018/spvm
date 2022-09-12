@@ -36,7 +36,8 @@ typedef double    SpvmF64;
 
 typedef struct SpvmString_ {
   SpvmWord wordCount;
-  std::string str;
+  SpvmWord strLen;
+  SpvmByte *str;
 } SpvmString;
 
 typedef struct SpvmOpcode_ {
@@ -52,11 +53,11 @@ typedef struct SpvmDebugSource_ {
 typedef struct SpvmName_ {
   SpvmWord targetId;
   SpvmWord memberIdx;
-  std::string name;
+  SpvmString name;
 } SpvmName;
 
 typedef struct SpvmExtension_ {
-  std::string name;
+  SpvmString name;
 } SpvmExtension;
 
 typedef struct SpvmExtInstImport_ {
@@ -68,7 +69,7 @@ typedef struct SpvmExtInstImport_ {
 typedef struct SpvmEntryPoint_ {
   SpvExecutionModel executionModel;
   SpvmWord id;
-  std::string name;
+  SpvmString name;
   SpvmWord globalIdCnt;
   SpvmWord *globalIds;
 } SpvmEntryPoint;

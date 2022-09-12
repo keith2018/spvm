@@ -14,25 +14,25 @@
 
 namespace SPVM {
 
-typedef void (*OpFunction)(SpvmWord *, SpvmByte *, SpvmOpcode, RuntimeContext *);
+typedef RuntimeResult (*OpFunction)(SpvmWord *, SpvmByte *, SpvmOpcode, RuntimeContext *);
 
 static constexpr SpvmWord __opFuncCnt = 512;
 static OpFunction __opFuncs[__opFuncCnt];
 
-#define DEF_OP_FUNC(op) static void func_##op(SpvmWord *pc, SpvmByte *sp, SpvmOpcode opcode, RuntimeContext *ctx)
+#define DEF_OP_FUNC(op) static RuntimeResult func_##op(SpvmWord *pc, SpvmByte *sp, SpvmOpcode opcode, RuntimeContext *ctx)
 #define REG_OP_FUNC(op) __opFuncs[op] = func_##op;
 
 #ifdef SPVM_OP_DISPATCH_TAIL_CALL
-#define GO_NEXT opcode = READ_OPCODE(); __opFuncs[opcode.op](pc, sp, opcode, ctx);
+#define GO_NEXT opcode = READ_OPCODE(); return __opFuncs[opcode.op](pc, sp, opcode, ctx);
 #else
-#define GO_NEXT ctx->pc = pc; ctx->sp = sp;
+#define GO_NEXT ctx->pc = pc; ctx->sp = sp; return Result_NoError;
 #endif
 
 #define READ_WORD() *pc++
 #define SKIP_WORD() pc++
 #define SKIP_WORD_N(count) pc += (count)
 #define REWIND_WORD_N(count) pc -= (count)
-#define READ_STR() readString(&pc).str
+#define READ_STR() readString(&pc, &sp)
 #define READ_OPCODE() readOpcode(pc++)
 #define READ_OPERAND() (SpvmValue *) ctx->resultIds[READ_WORD()]
 
@@ -53,13 +53,16 @@ static OpFunction __opFuncs[__opFuncCnt];
 #define MATRIX_f32(col, row)  value.members[(col)]->value.members[(row)]->value.f32
 #define MATRIX_value(col, row)  value.members[(col)]->value.members[(row)]->value
 
-static SpvmString readString(SpvmWord **ppc) {
+static SpvmString readString(SpvmWord **ppc, SpvmByte **psp) {
+  SpvmByte *sp = *psp;
   SpvmString ret;
-  SpvmWord strLen = strlen((const char *) *ppc);
-  ret.wordCount = (strLen + sizeof(SpvmWord)) / sizeof(SpvmWord);
-  ret.str = std::string(strLen, 0);
-  memcpy(&ret.str[0], *ppc, strLen);
+  ret.strLen = strlen((const char *) *ppc);
+  ret.wordCount = (ret.strLen + sizeof(SpvmWord)) / sizeof(SpvmWord);
+  ret.str = HEAP_MALLOC(ret.strLen + 1);
+  memcpy(&ret.str[0], *ppc, ret.strLen);
+  ret.str[ret.strLen] = '\0';
   *ppc += ret.wordCount;
+  *psp = sp;
   return ret;
 }
 
@@ -208,8 +211,8 @@ DEF_OP_FUNC(SpvOpExtension) {
 
 DEF_OP_FUNC(SpvOpExtInstImport) {
   SpvmWord resultId = READ_WORD();
-  std::string extName = READ_STR();
-  if (EXT_GLSLstd450 == extName) {
+  SpvmString extName = READ_STR();
+  if (strcmp(EXT_GLSLstd450, (const char *) extName.str) == 0) {
     SpvmWord extStructSize = sizeof(SpvmExtInstImport) + GLSLstd450Count * sizeof(void *);
     SpvmExtInstImport *ext = (SpvmExtInstImport *) HEAP_MALLOC(extStructSize);
     ext->setId = resultId;
@@ -217,9 +220,8 @@ DEF_OP_FUNC(SpvOpExtInstImport) {
     registerGLSLstd450(&ext->insPtr[0], ext->insCnt);
     ctx->resultIds[resultId] = ext;
   } else {
-    LOGE("ExtInstImport not support: %s", extName.c_str());
-    ctx->ret = Result_Error;
-    return;
+    LOGE("ExtInstImport not support: %s", extName.str);
+    return Result_Error;
   }
 
   GO_NEXT
@@ -230,7 +232,7 @@ DEF_OP_FUNC(SpvOpExtInst) {
   SpvmExtInstImport *ext = (SpvmExtInstImport *) ctx->resultIds[READ_WORD()];
   OpFunction extFunc = (OpFunction) ext->insPtr[READ_WORD()];
   REWIND_WORD_N(4);
-  extFunc(pc, sp, opcode, ctx);
+  return extFunc(pc, sp, opcode, ctx);
 }
 
 DEF_OP_FUNC(SpvOpMemoryModel) {
@@ -238,13 +240,11 @@ DEF_OP_FUNC(SpvOpMemoryModel) {
   ctx->module->memoryModel = (SpvMemoryModel) READ_WORD();
   if (ctx->module->addressingModel != SpvAddressingModelLogical) {
     LOGE("Addressing model not support: %d", ctx->module->addressingModel);
-    ctx->ret = Result_Error;
-    return;
+    return Result_Error;
   }
   if (ctx->module->memoryModel != SpvMemoryModelSimple && ctx->module->memoryModel != SpvMemoryModelGLSL450) {
     LOGE("memory model not support: %d", ctx->module->memoryModel);
-    ctx->ret = Result_Error;
-    return;
+    return Result_Error;
   }
   GO_NEXT
 }
@@ -253,9 +253,8 @@ DEF_OP_FUNC(SpvOpEntryPoint) {
   SpvmEntryPoint entryPoint;
   entryPoint.executionModel = (SpvExecutionModel) READ_WORD();
   entryPoint.id = READ_WORD();
-  SpvmString name = readString(&pc);
-  entryPoint.name = name.str;
-  entryPoint.globalIdCnt = opcode.wordCount - name.wordCount - 3;
+  entryPoint.name = READ_STR();
+  entryPoint.globalIdCnt = opcode.wordCount - entryPoint.name.wordCount - 3;
   entryPoint.globalIds = (SpvmWord *) HEAP_MALLOC(entryPoint.globalIdCnt * sizeof(SpvmWord));
   for (SpvmWord i = 0; i < entryPoint.globalIdCnt; i++) {
     entryPoint.globalIds[i] = READ_WORD();
@@ -305,8 +304,7 @@ DEF_OP_FUNC(SpvOpTypeInt) {
   type->width = width;
   if (width != 32) {  // only support 32bit integer
     LOGE("SpvOpTypeInt bit width not support: %d", width);
-    ctx->ret = Result_Error;
-    return;
+    return Result_Error;
   }
   type->signedness = READ_WORD();
   PARSE_TYPE_END
@@ -319,8 +317,7 @@ DEF_OP_FUNC(SpvOpTypeFloat) {
   type->width = width;
   if (width != 32) {  // only support 32bit float
     LOGE("SpvOpTypeFloat bit width not support: %d", width);
-    ctx->ret = Result_Error;
-    return;
+    return Result_Error;
   }
   PARSE_TYPE_END
   GO_NEXT
@@ -449,8 +446,7 @@ DEF_OP_FUNC(SpvOpConstant) {
     var->value.u32 = READ_WORD();
   } else {
     LOGE("SpvOpConstant value bit width not support: %d", numberWidth);
-    ctx->ret = Result_Error;
-    return;
+    return Result_Error;
   }
   ctx->resultIds[resultId] = var;
   GO_NEXT
@@ -553,8 +549,7 @@ DEF_OP_FUNC(SpvOpAccessChain) {
     SpvmValue *memberIdx = READ_OPERAND();
     if (memberIdx->value.u32 > valuePtr->memberCnt) {
       LOGE("OpAccessChain index out of bounds: %d > %d", memberIdx->value.u32, valuePtr->memberCnt);
-      ctx->ret = Result_Error;
-      return;
+      return Result_Error;
     }
     valuePtr = valuePtr->value.members[memberIdx->value.u32];
   }
@@ -602,8 +597,7 @@ DEF_OP_FUNC(SpvOpFunction) {
   if ((pc - ctx->module->code) * sizeof(SpvmWord) >= ctx->module->codeSize) {
 //    LOGD("init module done");
     ctx->stackBase = sp;
-    ctx->ret = Result_InitEnd;
-    return;
+    return Result_InitEnd;
   }
   GO_NEXT
 }
@@ -624,8 +618,7 @@ DEF_OP_FUNC(SpvOpFunctionEnd) {
   ctx->currFrame = ctx->currFrame->prevFrame;
   if (!ctx->currFrame) {
     // end of all entry point function
-    ctx->ret = Result_FunctionEnd;
-    return;
+    return Result_FunctionEnd;
   } else {
     pc = ctx->currFrame->pc;
   }
@@ -1726,7 +1719,7 @@ DEF_OP_FUNC(SpvOpSwitch) {
 }
 
 DEF_OP_FUNC(SpvOpKill) {
-  ctx->ret = Result_Killed;
+  return Result_Killed;
 }
 
 DEF_OP_FUNC(SpvOpReturn) {
@@ -1744,7 +1737,7 @@ DEF_OP_FUNC(SpvOpReturnValue) {
 
 DEF_OP_FUNC(SpvOpUnreachable) {
   LOGE("SpvOpUnreachable");
-  ctx->ret = Result_Unreachable;
+  return Result_Unreachable;
 }
 
 }

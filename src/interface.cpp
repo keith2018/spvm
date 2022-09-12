@@ -51,7 +51,7 @@ SpvmWord Interface::getLocationByName(const char *name) {
   SpvmModule *module = runtimeCtx_->module;
   for (SpvmWord i = 0; i < module->names.size(); i++) {
     SpvmName *nameObj = &module->names[i];
-    if (nameObj->name == name && nameObj->memberIdx == -1) {
+    if (strcmp((const char *) nameObj->name.str, name) == 0 && nameObj->memberIdx == -1) {
       return locationMap_[nameObj->targetId];
     }
   }
@@ -63,7 +63,7 @@ SpvmUniformBinding Interface::getBindingByName(const char *name) {
   SpvmModule *module = runtimeCtx_->module;
   for (SpvmWord i = 0; i < module->names.size(); i++) {
     SpvmName *nameObj = &module->names[i];
-    if (nameObj->name == name && nameObj->memberIdx == -1) {
+    if (strcmp((const char *) nameObj->name.str, name) == 0 && nameObj->memberIdx == -1) {
       return bindingMap_[nameObj->targetId];
     }
   }
