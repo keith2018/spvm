@@ -6,8 +6,6 @@ Tiny [SPIR-V](https://registry.khronos.org/SPIR-V/) virtual machine (interpreter
 [![CMake MacOS](https://github.com/keith2018/spvm/actions/workflows/cmake_macos.yml/badge.svg)](https://github.com/keith2018/spvm/actions/workflows/cmake_macos.yml)
 [![CMake Windows](https://github.com/keith2018/spvm/actions/workflows/cmake_windows.yml/badge.svg)](https://github.com/keith2018/spvm/actions/workflows/cmake_windows.yml)
 
-![](images/awesomeface.png)
-
 Opcodes support status:
 - [Core (SPIR-V 1.0) Opcodes](OPCODE_CORE.md)
 - [Ext (GLSL.std.450) Opcodes](OPCODE_EXT.md)
@@ -19,9 +17,15 @@ Spvm-ShaderToy implements [shader effects](https://www.shadertoy.com/) without G
 
 ### Gallery
 
-![](images/fstyD4.png) ![](images/ftdfWn.png)
+<p float="left">
+  <img src="images/fstyD4.png" width="600" />
+  <img src="images/ftdfWn.png" width="600" />
+</p>
 
-![](images/Nt3BzM.png) ![](images/XdlSDs.png)
+<p float="left">
+  <img src="images/Nt3BzM.png" width="600" />
+  <img src="images/XdlSDs.png" width="600" />
+</p>
 
 ## Example
 
