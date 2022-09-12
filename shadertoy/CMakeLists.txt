@@ -30,6 +30,7 @@ add_executable(${PROJECT_NAME}
         renderer.cpp
         compiler.cpp
         resourcelimits.cpp
+        settingpanel.cpp
         timer.cpp
         main.cpp
         )

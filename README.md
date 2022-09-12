@@ -15,7 +15,13 @@ Opcodes support status:
 The project is still in progress ...
 
 ## Spvm-ShaderToy
-Spvm-ShaderToy implements [shader effects](https://www.shadertoy.com/) without GPU.
+Spvm-ShaderToy implements [shader effects](https://www.shadertoy.com/) without GPU (but slow 😀).
+
+### Gallery
+
+![](images/fstyD4.png) ![](images/ftdfWn.png)
+
+![](images/Nt3BzM.png) ![](images/XdlSDs.png)
 
 ## Example
 

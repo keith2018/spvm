@@ -12,12 +12,13 @@
 #include <GLFW/glfw3.h>
 
 #include "renderer.h"
+#include "settingpanel.h"
 
 SPVM::ShaderToy::Renderer *renderer = nullptr;
+SPVM::ShaderToy::SettingPanel *settingPanel = nullptr;
 
-const unsigned int SCR_WIDTH = 1000;
-const unsigned int SCR_HEIGHT = 800;
-const char *SHADER_PATH = "assets/shaders/basic.frag";
+const unsigned int SCR_WIDTH = 800;
+const unsigned int SCR_HEIGHT = 450;
 
 double lastX = SCR_WIDTH / 2.0f;
 double lastY = SCR_HEIGHT / 2.0f;
@@ -179,12 +180,16 @@ int main() {
 
   // init renderer
   renderer = new SPVM::ShaderToy::Renderer();
-  if (!renderer->create(window, SCR_WIDTH, SCR_HEIGHT, SHADER_PATH)) {
+  if (!renderer->create(window, SCR_WIDTH, SCR_HEIGHT)) {
     std::cout << "Failed to initialize SPVM::ShaderToy::Renderer" << std::endl;
     delete renderer;
     glfwTerminate();
     return -1;
   }
+
+  // init settings panel
+  settingPanel = new SPVM::ShaderToy::SettingPanel(renderer->getSettings());
+  settingPanel->init(window, SCR_WIDTH, SCR_HEIGHT);
 
   // load and create a texture
   // -------------------------
@@ -225,9 +230,17 @@ int main() {
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 
+    settingPanel->onDraw();
+
     glfwSwapBuffers(window);
     glfwPollEvents();
   }
+
+  renderer->destroy();
+  delete renderer;
+
+  settingPanel->destroy();
+  delete settingPanel;
 
   glDeleteVertexArrays(1, &VAO);
   glDeleteBuffers(1, &VBO);
@@ -244,6 +257,10 @@ int main() {
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
 void processInput(GLFWwindow *window) {
+  if (settingPanel->wantCaptureKeyboard()) {
+    return;
+  }
+
   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
     glfwSetWindowShouldClose(window, true);
     return;
@@ -254,7 +271,7 @@ void processInput(GLFWwindow *window) {
   if (state == GLFW_PRESS) {
     if (!key_h_pressed) {
       key_h_pressed = true;
-      // TODO
+      settingPanel->toggleShowState();
     }
   } else if (state == GLFW_RELEASE) {
     key_h_pressed = false;
@@ -268,11 +285,16 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
   // height will be significantly larger than specified on retina displays.
   glViewport(0, 0, width, height);
   renderer->updateSize(width, height);
+  settingPanel->updateSize(width, height);
 }
 
 // glfw: whenever the mouse moves, this callback is called
 // -------------------------------------------------------
 void mouse_callback(GLFWwindow *window, double xPos, double yPos) {
+  if (settingPanel->wantCaptureMouse()) {
+    return;
+  }
+
   if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
     if (firstMouse) {
       lastX = xPos;
@@ -292,5 +314,7 @@ void mouse_callback(GLFWwindow *window, double xPos, double yPos) {
 // glfw: whenever the mouse scroll wheel scrolls, this callback is called
 // ----------------------------------------------------------------------
 void scroll_callback(GLFWwindow *window, double xOffset, double yOffset) {
-  // TODO
+  if (settingPanel->wantCaptureMouse()) {
+    return;
+  }
 }

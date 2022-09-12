@@ -11,6 +11,8 @@
 #include "runtime.h"
 #include "image.h"
 #include "timer.h"
+#include "settings.h"
+#include "threadpool.h"
 
 namespace SPVM {
 namespace ShaderToy {
@@ -44,36 +46,53 @@ typedef struct UniformInput_ {
   float iSampleRate;            // sound sample rate (i.e., 44100)
 } UniformInput;
 
+typedef struct SpvmExecContext_ {
+  SPVM::SpvmModule module;
+  SPVM::Runtime runtime;
+} SpvmExecContext;
+
 class Renderer {
  public:
   Renderer();
   ~Renderer();
-  bool create(void *window, int width, int height, const char *shaderPath);
+  bool create(void *window, int width, int height);
+  bool reloadShader(const char *shaderPath);
   void drawFrame();
   void updateSize(int width, int height);
+  void destroy();
 
   inline Buffer2D *getFrame() {
     return colorBuffer_;
+  }
+
+  inline Settings &getSettings() {
+    return settings_;
   }
 
  private:
   void createBuffer(int width, int height);
   void destroyBuffer();
 
+  static std::string readFileString(const char *path);
+
  private:
+  Settings settings_;
+  int rasterBlockSize_ = 32;
+  ThreadPool threadPool_;
+  std::vector<SpvmExecContext> spvmContexts_;
+
+  std::string shaderWrapperStr_;
   std::vector<uint32_t> spvBytes_;
-  Buffer2D *colorBuffer_;
-  SPVM::SpvmModule module_;
-  SPVM::Runtime runtime_;
+  Buffer2D *colorBuffer_ = nullptr;
 
   UniformInput uniformInput_;
   Timer timer_;
-  float lastFrameTime_;
-  int frameIdx_;
+  float lastFrameTime_ = 0.f;
+  int frameIdx_ = 0;
 
-  SpvmImage *iChannel0Image_;
-  SpvmSampler *iChannel0Sampler_;
-  SpvmSampledImage *iChannel0SampledImage_;
+  SpvmImage *iChannel0Image_ = nullptr;
+  SpvmSampler *iChannel0Sampler_ = nullptr;
+  SpvmSampledImage *iChannel0SampledImage_ = nullptr;
 };
 
 }

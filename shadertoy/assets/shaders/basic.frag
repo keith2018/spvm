@@ -1,27 +1,11 @@
-#version 450
-
-layout(set = 0, binding = 0) uniform InputData
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    vec3      iResolution;           // viewport resolution (in pixels)
-    float     iTime;                 // shader playback time (in seconds)
-    float     iTimeDelta;            // render time (in seconds)
-    int       iFrame;                // shader playback frame
-    vec4      iMouse;                // mouse pixel coords. xy: current (if MLB down), zw: click
-    vec4      iDate;                 // (year, month, day, time in seconds)
-    float     iSampleRate;           // sound sample rate (i.e., 44100)
-};
+    // Normalized pixel coordinates (from 0 to 1)
+    vec2 uv = fragCoord/iResolution.xy;
 
-layout(set = 0, binding = 1) uniform sampler2D iChannel0;
+    // Time varying pixel color
+    vec3 col = 0.5 + 0.5*cos(iTime+uv.xyx+vec3(0,2,4));
 
-layout (location = 0) in vec2 fragCoord;
-layout (location = 0) out vec4 fragColor;
-
-void mainImage(out vec4 fragColor, in vec2 fragCoord)
-{
-    fragColor = texture(iChannel0, fragCoord);
-}
-
-void main()
-{
-    mainImage(fragColor, fragCoord);
+    // Output to screen
+    fragColor = vec4(col,1.0);
 }
