@@ -27,55 +27,14 @@ Renderer::~Renderer() {
   destroyBuffer();
 }
 
-bool Renderer::create(void *window, int width, int height, const char *shaderPath) {
+bool Renderer::create(void *window, int width, int height) {
   colorBuffer_ = new Buffer2D();
   colorBuffer_->data = nullptr;
   createBuffer(width, height);
 
-  // compile spv
-  FILE *shaderFile = fopen(shaderPath, "rb");
-  if (!shaderFile) {
-    LOGE("error open shader file");
-    return false;
-  }
-
-  fseek(shaderFile, 0, SEEK_END);
-  SpvmWord fileLength = ftell(shaderFile);
-  if (fileLength <= 0) {
-    LOGE("error get shader file size");
-    fclose(shaderFile);
-    return false;
-  }
-
-  char *shaderBuffer = new char[fileLength + 1];
-  rewind(shaderFile);
-  fread(shaderBuffer, 1, fileLength, shaderFile);
-  shaderBuffer[fileLength] = '\0';
-  fclose(shaderFile);
-  spvBytes_ = Compiler::compileShaderFragment(shaderBuffer);
-  delete[] shaderBuffer;
-  if (spvBytes_.empty()) {
-    LOGE("error compile shader file to spir-v");
-    return false;
-  }
-
-  bool success = SPVM::Decoder::decodeBytes((const SpvmByte *) (spvBytes_.data()),
-                                            spvBytes_.size() * sizeof(uint32_t),
-                                            &module_);
-  if (!success) {
-    LOGE("decode spv file failed");
-    return false;
-  }
-
-  success = runtime_.initWithModule(&module_, HEAP_SIZE);
-  if (!success) {
-    LOGE("init spv module failed");
-    return false;
-  }
-
   // init uniform
-  uniformInput_.iResolution.x = (float)colorBuffer_->width;
-  uniformInput_.iResolution.y = (float)colorBuffer_->height;
+  uniformInput_.iResolution.x = (float) colorBuffer_->width;
+  uniformInput_.iResolution.y = (float) colorBuffer_->height;
   uniformInput_.iResolution.z = 0;
 
   int iw = 0, ih = 0, n = 0;
@@ -128,47 +87,122 @@ bool Renderer::create(void *window, int width, int height, const char *shaderPat
 
     // sampledImage
     iChannel0SampledImage_ = SPVM::createSampledImage(iChannel0Image_, iChannel0Sampler_);
-    runtime_.writeUniformBinding(iChannel0SampledImage_, 0, 1, 0);
+  }
+
+  // load shader
+  settings_.loadShaderCallback_ = [&](std::string shaderPath) {
+    reloadShader(shaderPath.c_str());
+  };
+  shaderWrapperStr_ = readFileString(settings_.shaderWrapperPath_.c_str());
+  if (shaderWrapperStr_.empty()) {
+    LOGE("error read shader wrapper file: %s", settings_.shaderWrapperPath_.c_str());
+    return false;
+  }
+
+  return reloadShader(settings_.getShaderPath().c_str());
+}
+
+bool Renderer::reloadShader(const char *shaderPath) {
+  LOGI("start load shader: %s", shaderPath);
+  std::string shaderStr = readFileString(shaderPath);
+  if (shaderStr.empty()) {
+    LOGE("error read shader file: %s", shaderPath);
+    return false;
+  }
+
+  shaderStr = shaderWrapperStr_ + shaderStr;
+  spvBytes_ = Compiler::compileShaderFragment(shaderStr.c_str());
+  if (spvBytes_.empty()) {
+    LOGE("error compile shader file to spir-v");
+    return false;
+  }
+
+  spvmContexts_.clear();
+  spvmContexts_.resize(threadPool_.getThreadCnt());
+  for (size_t i = 0; i < spvmContexts_.size(); i++) {
+    SpvmExecContext &ctx = spvmContexts_[i];
+    bool success = SPVM::Decoder::decodeBytes((const SpvmByte *) (spvBytes_.data()),
+                                              spvBytes_.size() * sizeof(uint32_t),
+                                              &ctx.module);
+    if (!success) {
+      LOGE("decode spv file failed");
+      return false;
+    }
+    success = ctx.runtime.initWithModule(&ctx.module, HEAP_SIZE);
+    if (!success) {
+      LOGE("init spvm runtime failed");
+      return false;
+    }
+
+    if (iChannel0SampledImage_) {
+      ctx.runtime.writeUniformBinding(iChannel0SampledImage_, 0, 1, 0);
+    }
   }
 
   lastFrameTime_ = 0.f;
   frameIdx_ = 0;
   timer_.start();
+
+  LOGI("load shader success.");
   return true;
 }
 
 void Renderer::drawFrame() {
   // update uniform
-  uniformInput_.iTime = (float)timer_.elapse() / 1000.f;
+  uniformInput_.iTime = (float) timer_.elapse() / 1000.f;
   uniformInput_.iTimeDelta = uniformInput_.iTime - lastFrameTime_;
   lastFrameTime_ = uniformInput_.iTime;
   frameIdx_++;
   uniformInput_.iFrame = frameIdx_;
-  runtime_.writeUniformBinding(&uniformInput_, 0, 0);
+  for (size_t i = 0; i < spvmContexts_.size(); i++) {
+    spvmContexts_[i].runtime.writeUniformBinding(&uniformInput_, 0, 0);
+  }
 
   // fragment shading
-  float fragCoord[2];
-  float fragColor[4];
-  for (size_t y = 0; y < colorBuffer_->height; y++) {
-    uint8_t *rowPtr = &colorBuffer_->data[y * colorBuffer_->width * 4];
-    for (size_t x = 0; x < colorBuffer_->width; x++) {
-      fragCoord[0] = (float)x / colorBuffer_->width;
-      fragCoord[1] = (float)y / colorBuffer_->height;
-      runtime_.writeInput(fragCoord, 0);
-      runtime_.execEntryPoint();
-      runtime_.readOutput(fragColor, 0);
+  float blockSize = (float) rasterBlockSize_;
+  int blockCntY = (int) (((float) colorBuffer_->height + blockSize - 1.f) / blockSize);
+  int blockCntX = (int) (((float) colorBuffer_->width + blockSize - 1.f) / blockSize);
 
-      uint8_t *pixel = &rowPtr[x * 4];
-      pixel[0] = PIXEL_CONVERT(fragColor[0]);
-      pixel[1] = PIXEL_CONVERT(fragColor[1]);
-      pixel[2] = PIXEL_CONVERT(fragColor[2]);
-      pixel[3] = PIXEL_CONVERT(fragColor[3]);
+  for (int blockY = 0; blockY < blockCntY; blockY++) {
+    for (int blockX = 0; blockX < blockCntX; blockX++) {
+      threadPool_.pushTask([&, blockX, blockY](int threadId) {
+        Runtime &rt = spvmContexts_[threadId].runtime;
+        float fragCoord[2];
+        float fragColor[4];
+
+        int blockStartX = blockX * (int) blockSize;
+        int blockStartY = blockY * (int) blockSize;
+
+        for (size_t y = blockStartY; y <= blockStartY + (int) blockSize && y < colorBuffer_->height; y++) {
+          uint8_t *rowPtr = &colorBuffer_->data[y * colorBuffer_->width * 4];
+          for (size_t x = blockStartX; x <= blockStartX + (int) blockSize && x < colorBuffer_->width; x++) {
+            fragCoord[0] = (float) x;
+            fragCoord[1] = (float) y;
+            rt.writeInput(fragCoord, 0);
+
+            rt.execEntryPoint();
+
+            rt.readOutput(fragColor, 0);
+            uint8_t *pixel = &rowPtr[x * 4];
+            pixel[0] = PIXEL_CONVERT(fragColor[0]);
+            pixel[1] = PIXEL_CONVERT(fragColor[1]);
+            pixel[2] = PIXEL_CONVERT(fragColor[2]);
+            pixel[3] = PIXEL_CONVERT(fragColor[3]);
+          }
+        }
+      });
     }
   }
+
+  threadPool_.waitTasksFinish();
 }
 
 void Renderer::updateSize(int width, int height) {
-  createBuffer(width, height);
+  if (colorBuffer_) {
+    createBuffer(width, height);
+    uniformInput_.iResolution.x = (float) colorBuffer_->width;
+    uniformInput_.iResolution.y = (float) colorBuffer_->height;
+  }
 }
 
 void Renderer::createBuffer(int width, int height) {
@@ -186,6 +220,37 @@ void Renderer::destroyBuffer() {
     delete colorBuffer_;
     colorBuffer_ = nullptr;
   }
+}
+
+void Renderer::destroy() {
+  destroyBuffer();
+}
+
+std::string Renderer::readFileString(const char *path) {
+  std::string retStr;
+  FILE *file = fopen(path, "rb");
+  if (!file) {
+    LOGE("error open file");
+    return retStr;
+  }
+
+  fseek(file, 0, SEEK_END);
+  size_t fileLength = ftell(file);
+  if (fileLength <= 0) {
+    LOGE("error get file size");
+    fclose(file);
+    return retStr;
+  }
+
+  char *buffer = new char[fileLength + 1];
+  rewind(file);
+  fread(buffer, 1, fileLength, file);
+  buffer[fileLength] = '\0';
+  retStr = buffer;
+  fclose(file);
+  delete[] buffer;
+
+  return retStr;
 }
 
 }
