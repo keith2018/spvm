@@ -9,7 +9,7 @@
 #define REG_GLSL_OP_FUNC(op) ins[GLSLstd450##op] = (void*)func_GLSLstd450##op;
 #define DEF_GLSL_OP_FUNC(op) DEF_OP_FUNC(GLSLstd450##op)
 
-static void func_GLSLstd450_NotSupport(SpvmWord *pc, SpvmByte *sp, SpvmOpcode &opcode, RuntimeContext &ctx) {
+static void func_GLSLstd450_NotSupport(SpvmWord *pc, SpvmByte *sp, SpvmOpcode opcode, RuntimeContext *ctx) {
   LOGE("GLSL.std.450 Instruction not support, skip. opcode: %s, size: %d", spvmOpString(opcode.op), opcode.wordCount);
   SKIP_WORD_N(opcode.wordCount - 1);
   GO_NEXT
@@ -22,7 +22,7 @@ static void func_GLSLstd450_NotSupport(SpvmWord *pc, SpvmByte *sp, SpvmOpcode &o
   SpvmValue *ret = CREATE_VALUE(resultType);                                          \
 
 #define END_EXT_FUNCTION                                                              \
-  ctx.resultIds[resultId] = ret;                                                      \
+  ctx->resultIds[resultId] = ret;                                                     \
   GO_NEXT                                                                             \
 
 #define GLSL_MATH_ONE_IMPL(RetType, OpType, OP)                                       \
@@ -210,7 +210,7 @@ DEF_GLSL_OP_FUNC(MatrixInverse) {
 DEF_GLSL_OP_FUNC(Modf) {
   BEGIN_EXT_FUNCTION
   SpvmValue *x = READ_OPERAND();
-  SpvmPointer *pointer = (SpvmPointer *) ctx.resultIds[READ_WORD()];
+  SpvmPointer *pointer = (SpvmPointer *) ctx->resultIds[READ_WORD()];
   SpvmValue *y = pointer->objPtr;
   if (x->memberCnt > 0) {
     for (SpvmWord i = 0; i < x->memberCnt; i++) {
@@ -284,7 +284,7 @@ DEF_GLSL_OP_FUNC(Fma) {
 DEF_GLSL_OP_FUNC(Frexp) {
   BEGIN_EXT_FUNCTION
   SpvmValue *x = READ_OPERAND();
-  SpvmPointer *pointer = (SpvmPointer *) ctx.resultIds[READ_WORD()];
+  SpvmPointer *pointer = (SpvmPointer *) ctx->resultIds[READ_WORD()];
   SpvmValue *exp = pointer->objPtr;
   if (x->memberCnt > 0) {
     for (SpvmWord i = 0; i < x->memberCnt; i++) {

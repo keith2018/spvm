@@ -9,7 +9,7 @@
 
 namespace SPVM {
 
-static void func_SpvOp_NotSupport(SpvmWord *pc, SpvmByte *sp, SpvmOpcode &opcode, RuntimeContext &ctx) {
+static void func_SpvOp_NotSupport(SpvmWord *pc, SpvmByte *sp, SpvmOpcode opcode, RuntimeContext *ctx) {
   LOGE("Instruction not support, skip. opcode: %s, size: %d", spvmOpString(opcode.op), opcode.wordCount);
   SKIP_WORD_N(opcode.wordCount - 1);
   GO_NEXT
@@ -252,37 +252,38 @@ bool Runtime::initWithModule(SpvmModule *module, SpvmWord heapSize) {
 
   SpvmWord *pc = ctx_.module->code;
   SpvmByte *sp = heap_ + module->bound * sizeof(void *);
-  RuntimeContext &ctx = ctx_;
+  SpvmOpcode opcode;
+  RuntimeContext *ctx = &ctx_;
   GO_NEXT
 
 #ifndef SPVM_OP_DISPATCH_TAIL_CALL
-  while(ctx.ret == Result_UNKNOWN) {
-    pc = ctx.pc;
-    sp = ctx.sp;
+  while(ctx->ret == Result_UNKNOWN) {
+    pc = ctx->pc;
+    sp = ctx->sp;
     SpvmOpcode nextOp = READ_OPCODE();
     __opFuncs[nextOp.op](pc, sp, nextOp, ctx);
   }
 #endif
 
-  if (ctx.ret != Result_InitEnd) {
+  if (ctx->ret != Result_InitEnd) {
     return false;
   }
-  ctx.inited = true;
-  interface_.init(&ctx, ctx.resultIds);
+  ctx->inited = true;
+  interface_.init(ctx, ctx->resultIds);
   return true;
 }
 
 bool Runtime::execEntryPoint(SpvmWord entryIdx) {
-  RuntimeContext &ctx = ctx_;
-  if (ctx.module->entryPoints.empty()) {
+  RuntimeContext *ctx = &ctx_;
+  if (ctx->module->entryPoints.empty()) {
     LOGE("no entry point defined");
     return false;
   }
 
-  ctx.ret = Result_InitEnd;
-  auto &entry = ctx.module->entryPoints[entryIdx];
+  ctx->ret = Result_InitEnd;
+  auto &entry = ctx->module->entryPoints[entryIdx];
   invokeFunction(entry.id);
-  return ctx.ret == Result_FunctionEnd;
+  return ctx->ret == Result_FunctionEnd;
 }
 
 void Runtime::invokeFunction(SpvmWord funcId) {
@@ -300,13 +301,14 @@ void Runtime::invokeFunction(SpvmWord funcId) {
 
   // exec function instructions
   SpvmWord *pc = ctx_.currFrame->pc = func->code;
-  RuntimeContext &ctx = ctx_;
+  SpvmOpcode opcode;
+  RuntimeContext *ctx = &ctx_;
   GO_NEXT
 
 #ifndef SPVM_OP_DISPATCH_TAIL_CALL
-  while(ctx.ret == Result_InitEnd) {
-    pc = ctx.pc;
-    sp = ctx.sp;
+  while(ctx->ret == Result_InitEnd) {
+    pc = ctx->pc;
+    sp = ctx->sp;
     SpvmOpcode nextOp = READ_OPCODE();
     __opFuncs[nextOp.op](pc, sp, nextOp, ctx);
   }
