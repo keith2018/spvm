@@ -30,29 +30,29 @@ typedef struct TestContext_ {
 
 #define ASSERT_VEC2_EQ(vec, v0, v1)                 \
   ASSERT_EQ((vec)[0], v0);                          \
-  ASSERT_EQ((vec)[1], v1);                          \
+  ASSERT_EQ((vec)[1], v1);
 
 #define ASSERT_VEC3_EQ(vec, v0, v1, v2)             \
   ASSERT_EQ((vec)[0], v0);                          \
   ASSERT_EQ((vec)[1], v1);                          \
-  ASSERT_EQ((vec)[2], v2);                          \
+  ASSERT_EQ((vec)[2], v2);
 
 #define ASSERT_VEC4_EQ(vec, v0, v1, v2, v3)         \
   ASSERT_EQ((vec)[0], v0);                          \
   ASSERT_EQ((vec)[1], v1);                          \
   ASSERT_EQ((vec)[2], v2);                          \
-  ASSERT_EQ((vec)[3], v3);                          \
+  ASSERT_EQ((vec)[3], v3);
 
 #define ASSERT_FLOAT_VEC3_EQ(vec, v0, v1, v2)       \
   ASSERT_FLOAT_EQ((vec)[0], v0);                    \
   ASSERT_FLOAT_EQ((vec)[1], v1);                    \
-  ASSERT_FLOAT_EQ((vec)[2], v2);                    \
+  ASSERT_FLOAT_EQ((vec)[2], v2);
 
 #define ASSERT_FLOAT_VEC4_EQ(vec, v0, v1, v2, v3)   \
   ASSERT_FLOAT_EQ((vec)[0], v0);                    \
   ASSERT_FLOAT_EQ((vec)[1], v1);                    \
   ASSERT_FLOAT_EQ((vec)[2], v2);                    \
-  ASSERT_FLOAT_EQ((vec)[3], v3);                    \
+  ASSERT_FLOAT_EQ((vec)[3], v3);
 
 
 #define TEST_GLSL_SPV(name, path)                   \
@@ -64,4 +64,4 @@ typedef struct TestContext_ {
     int outAssert = -1;                             \
     ctx.runtime.readOutput(&outAssert, 0);          \
     ASSERT_FLOAT_EQ(outAssert, -1);                 \
-  }                                                 \
+  }
