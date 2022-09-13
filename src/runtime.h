@@ -36,7 +36,6 @@ typedef enum {
 } RuntimeResult;
 
 typedef struct RuntimeContext {
-  bool inited;
   Runtime *runtime;
   SpvmModule *module;
   void **resultIds;

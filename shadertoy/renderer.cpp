@@ -24,7 +24,7 @@ namespace ShaderToy {
 Renderer::Renderer() : colorBuffer_(nullptr) {}
 
 Renderer::~Renderer() {
-  destroyBuffer();
+  destroy();
 }
 
 bool Renderer::create(void *window, int width, int height) {
@@ -117,25 +117,32 @@ bool Renderer::reloadShader(const char *shaderPath) {
     return false;
   }
 
-  spvmContexts_.clear();
-  spvmContexts_.resize(threadPool_.getThreadCnt());
-  for (size_t i = 0; i < spvmContexts_.size(); i++) {
-    SpvmExecContext &ctx = spvmContexts_[i];
-    bool success = SPVM::Decoder::decodeBytes((const SpvmByte *) (spvBytes_.data()),
-                                              spvBytes_.size() * sizeof(uint32_t),
-                                              &ctx.module);
-    if (!success) {
-      LOGE("decode spv file failed");
-      return false;
-    }
-    success = ctx.runtime.initWithModule(&ctx.module, HEAP_SIZE);
+  // decode spv file
+  if (module_) {
+    delete module_;
+  }
+  module_ = new SpvmModule();
+  bool success = SPVM::Decoder::decodeBytes((const SpvmByte *) (spvBytes_.data()),
+                                            spvBytes_.size() * sizeof(uint32_t),
+                                            module_);
+  if (!success) {
+    LOGE("decode spv file failed");
+    return false;
+  }
+
+  // init runtime
+  runtimes_.clear();
+  runtimes_.resize(threadPool_.getThreadCnt());
+  for (size_t i = 0; i < runtimes_.size(); i++) {
+    Runtime &rt = runtimes_[i];
+    success = rt.initWithModule(module_, HEAP_SIZE);
     if (!success) {
       LOGE("init spvm runtime failed");
       return false;
     }
 
     if (iChannel0SampledImage_) {
-      ctx.runtime.writeUniformBinding(iChannel0SampledImage_, 0, 1, 0);
+      rt.writeUniformBinding(iChannel0SampledImage_, 0, 1, 0);
     }
   }
 
@@ -154,8 +161,8 @@ void Renderer::drawFrame() {
   lastFrameTime_ = uniformInput_.iTime;
   frameIdx_++;
   uniformInput_.iFrame = frameIdx_;
-  for (size_t i = 0; i < spvmContexts_.size(); i++) {
-    spvmContexts_[i].runtime.writeUniformBinding(&uniformInput_, 0, 0);
+  for (size_t i = 0; i < runtimes_.size(); i++) {
+    runtimes_[i].writeUniformBinding(&uniformInput_, 0, 0);
   }
 
   // fragment shading
@@ -166,7 +173,7 @@ void Renderer::drawFrame() {
   for (int blockY = 0; blockY < blockCntY; blockY++) {
     for (int blockX = 0; blockX < blockCntX; blockX++) {
       threadPool_.pushTask([&, blockX, blockY](int threadId) {
-        Runtime &rt = spvmContexts_[threadId].runtime;
+        Runtime &rt = runtimes_[threadId];
         float fragCoord[2];
         float fragColor[4];
 
@@ -224,6 +231,10 @@ void Renderer::destroyBuffer() {
 
 void Renderer::destroy() {
   destroyBuffer();
+  if (module_) {
+    delete module_;
+    module_ = nullptr;
+  }
 }
 
 std::string Renderer::readFileString(const char *path) {

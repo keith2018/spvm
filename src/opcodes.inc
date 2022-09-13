@@ -31,6 +31,7 @@ static OpFunction __opFuncs[__opFuncCnt];
 #define READ_WORD() *pc++
 #define SKIP_WORD() pc++
 #define SKIP_WORD_N(count) pc += (count)
+#define SKIP_CURRENT_OPCODE() SKIP_WORD_N(opcode.wordCount - 1)
 #define REWIND_WORD_N(count) pc -= (count)
 #define READ_STR() readString(&pc, &sp)
 #define READ_OPCODE() readOpcode(pc++)
@@ -148,64 +149,92 @@ DEF_OP_FUNC(SpvOpNop) {
 }
 
 DEF_OP_FUNC(SpvOpSource) {
-  SpvmSource source;
-  source.language = (SpvSourceLanguage) READ_WORD();
-  source.languageVersion = READ_WORD();
-  // skip file & Source
-  SKIP_WORD_N(opcode.wordCount - 3);
-  ctx->module->source = source;
+  if (ctx->module->inited) {
+    SKIP_CURRENT_OPCODE();
+  } else {
+    SpvmSource source;
+    source.language = (SpvSourceLanguage) READ_WORD();
+    source.languageVersion = READ_WORD();
+    // skip file & Source
+    SKIP_WORD_N(opcode.wordCount - 3);
+    ctx->module->source = source;
+  }
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpSourceExtension) {
-  SpvmExtension ext;
-  ext.name = READ_STR();
-  ctx->module->sourceExtensions.emplace_back(ext);
+  if (ctx->module->inited) {
+    SKIP_CURRENT_OPCODE();
+  } else {
+    SpvmExtension ext;
+    ext.name = READ_STR();
+    ctx->module->sourceExtensions.emplace_back(ext);
+  }
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpName) {
-  SpvmName name;
-  name.targetId = READ_WORD();
-  name.memberIdx = -1;
-  name.name = READ_STR();
-  ctx->module->names.emplace_back(name);
+  if (ctx->module->inited) {
+    SKIP_CURRENT_OPCODE();
+  } else {
+    SpvmName name;
+    name.targetId = READ_WORD();
+    name.memberIdx = -1;
+    name.name = READ_STR();
+    ctx->module->names.emplace_back(name);
+  }
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpMemberName) {
-  SpvmName name;
-  name.targetId = READ_WORD();
-  name.memberIdx = READ_WORD();
-  name.name = READ_STR();
-  ctx->module->names.emplace_back(name);
+  if (ctx->module->inited) {
+    SKIP_CURRENT_OPCODE();
+  } else {
+    SpvmName name;
+    name.targetId = READ_WORD();
+    name.memberIdx = READ_WORD();
+    name.name = READ_STR();
+    ctx->module->names.emplace_back(name);
+  }
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpDecorate) {
-  SpvmDecoration decoration;
-  decoration.targetId = READ_WORD();
-  decoration.memberIdx = -1;
-  decoration.decoration = (SpvDecoration) READ_WORD();
-  decoration.extra = readDecorationExtra(&pc, decoration.decoration, opcode.wordCount - 3);
-  ctx->module->decorations[decoration.targetId].emplace_back(decoration);
+  if (ctx->module->inited) {
+    SKIP_CURRENT_OPCODE();
+  } else {
+    SpvmDecoration decoration;
+    decoration.targetId = READ_WORD();
+    decoration.memberIdx = -1;
+    decoration.decoration = (SpvDecoration) READ_WORD();
+    decoration.extra = readDecorationExtra(&pc, decoration.decoration, opcode.wordCount - 3);
+    ctx->module->decorations[decoration.targetId].emplace_back(decoration);
+  }
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpMemberDecorate) {
-  SpvmDecoration decoration;
-  decoration.targetId = READ_WORD();
-  decoration.memberIdx = READ_WORD();
-  decoration.decoration = (SpvDecoration) READ_WORD();
-  decoration.extra = readDecorationExtra(&pc, decoration.decoration, opcode.wordCount - 4);
-  ctx->module->decorations[decoration.targetId].emplace_back(decoration);
+  if (ctx->module->inited) {
+    SKIP_CURRENT_OPCODE();
+  } else {
+    SpvmDecoration decoration;
+    decoration.targetId = READ_WORD();
+    decoration.memberIdx = READ_WORD();
+    decoration.decoration = (SpvDecoration) READ_WORD();
+    decoration.extra = readDecorationExtra(&pc, decoration.decoration, opcode.wordCount - 4);
+    ctx->module->decorations[decoration.targetId].emplace_back(decoration);
+  }
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpExtension) {
-  SpvmExtension extension;
-  extension.name = READ_STR();
-  ctx->module->extensions.emplace_back(extension);
+  if (ctx->module->inited) {
+    SKIP_CURRENT_OPCODE();
+  } else {
+    SpvmExtension extension;
+    extension.name = READ_STR();
+    ctx->module->extensions.emplace_back(extension);
+  }
   GO_NEXT
 }
 
@@ -236,44 +265,60 @@ DEF_OP_FUNC(SpvOpExtInst) {
 }
 
 DEF_OP_FUNC(SpvOpMemoryModel) {
-  ctx->module->addressingModel = (SpvAddressingModel) READ_WORD();
-  ctx->module->memoryModel = (SpvMemoryModel) READ_WORD();
-  if (ctx->module->addressingModel != SpvAddressingModelLogical) {
-    LOGE("Addressing model not support: %d", ctx->module->addressingModel);
-    return Result_Error;
-  }
-  if (ctx->module->memoryModel != SpvMemoryModelSimple && ctx->module->memoryModel != SpvMemoryModelGLSL450) {
-    LOGE("memory model not support: %d", ctx->module->memoryModel);
-    return Result_Error;
+  if (ctx->module->inited) {
+    SKIP_CURRENT_OPCODE();
+  } else {
+    ctx->module->addressingModel = (SpvAddressingModel) READ_WORD();
+    ctx->module->memoryModel = (SpvMemoryModel) READ_WORD();
+    if (ctx->module->addressingModel != SpvAddressingModelLogical) {
+      LOGE("Addressing model not support: %d", ctx->module->addressingModel);
+      return Result_Error;
+    }
+    if (ctx->module->memoryModel != SpvMemoryModelSimple && ctx->module->memoryModel != SpvMemoryModelGLSL450) {
+      LOGE("memory model not support: %d", ctx->module->memoryModel);
+      return Result_Error;
+    }
   }
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpEntryPoint) {
-  SpvmEntryPoint entryPoint;
-  entryPoint.executionModel = (SpvExecutionModel) READ_WORD();
-  entryPoint.id = READ_WORD();
-  entryPoint.name = READ_STR();
-  entryPoint.globalIdCnt = opcode.wordCount - entryPoint.name.wordCount - 3;
-  entryPoint.globalIds = (SpvmWord *) HEAP_MALLOC(entryPoint.globalIdCnt * sizeof(SpvmWord));
-  for (SpvmWord i = 0; i < entryPoint.globalIdCnt; i++) {
-    entryPoint.globalIds[i] = READ_WORD();
+  if (ctx->module->inited) {
+    SKIP_CURRENT_OPCODE();
+  } else {
+    SpvmEntryPoint entryPoint;
+    entryPoint.executionModel = (SpvExecutionModel) READ_WORD();
+    entryPoint.id = READ_WORD();
+    entryPoint.name = READ_STR();
+    entryPoint.globalIdCnt = opcode.wordCount - entryPoint.name.wordCount - 3;
+    entryPoint.globalIds = (SpvmWord *) HEAP_MALLOC(entryPoint.globalIdCnt * sizeof(SpvmWord));
+    for (SpvmWord i = 0; i < entryPoint.globalIdCnt; i++) {
+      entryPoint.globalIds[i] = READ_WORD();
+    }
+    ctx->module->entryPoints.emplace_back(entryPoint);
   }
-  ctx->module->entryPoints.emplace_back(entryPoint);
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpExecutionMode) {
-  SpvmExecutionMode executionMode;
-  executionMode.entryPointId = READ_WORD();
-  executionMode.mode = (SpvExecutionMode) READ_WORD();
-  SKIP_WORD_N(opcode.wordCount - 3); // extra
-  ctx->module->executionModes.emplace_back(executionMode);
+  if (ctx->module->inited) {
+    SKIP_CURRENT_OPCODE();
+  } else {
+    SpvmExecutionMode executionMode;
+    executionMode.entryPointId = READ_WORD();
+    executionMode.mode = (SpvExecutionMode) READ_WORD();
+    SKIP_WORD_N(opcode.wordCount - 3); // extra
+    ctx->module->executionModes.emplace_back(executionMode);
+  }
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpCapability) {
-  ctx->module->capabilities.emplace_back((SpvCapability) READ_WORD());
+  if (ctx->module->inited) {
+    SKIP_CURRENT_OPCODE();
+  } else {
+    ctx->module->capabilities.emplace_back((SpvCapability) READ_WORD());
+  }
   GO_NEXT
 }
 
@@ -498,7 +543,7 @@ DEF_OP_FUNC(SpvOpVariable) {
   }
 
   // global variables
-  if (!ctx->inited) {
+  if (!ctx->module->inited) {
     ctx->module->globalPointers.emplace_back(resultId);
   }
 
@@ -770,30 +815,6 @@ DEF_OP_FUNC(SpvOpImageFetch) {
   SpvmImageOperands operands = readImageOperands(&pc, ctx, opcode.wordCount - 5);
   fetchImage(ret, operand, coordinate, coordinateId, &operands);
   ctx->resultIds[resultId] = ret;
-  GO_NEXT
-}
-
-DEF_OP_FUNC(SpvOpImageGather) {
-  SKIP_WORD_N(opcode.wordCount - 1);
-  LOGW("not implement: %s", spvmOpString(opcode.op));
-  GO_NEXT
-}
-
-DEF_OP_FUNC(SpvOpImageDrefGather) {
-  SKIP_WORD_N(opcode.wordCount - 1);
-  LOGW("not implement: %s", spvmOpString(opcode.op));
-  GO_NEXT
-}
-
-DEF_OP_FUNC(SpvOpImageRead) {
-  SKIP_WORD_N(opcode.wordCount - 1);
-  LOGW("not implement: %s", spvmOpString(opcode.op));
-  GO_NEXT
-}
-
-DEF_OP_FUNC(SpvOpImageWrite) {
-  SKIP_WORD_N(opcode.wordCount - 1);
-  LOGW("not implement: %s", spvmOpString(opcode.op));
   GO_NEXT
 }
 
