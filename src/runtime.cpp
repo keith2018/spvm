@@ -10,8 +10,8 @@
 namespace SPVM {
 
 static RuntimeResult func_SpvOp_NotSupport(SpvmWord *pc, SpvmByte *sp, SpvmOpcode opcode, RuntimeContext *ctx) {
-  LOGE("Instruction not support, skip. opcode: %s, size: %d", spvmOpString(opcode.op), opcode.wordCount);
-  SKIP_WORD_N(opcode.wordCount - 1);
+  LOGD("Instruction not support, skip. opcode: %s, size: %d", spvmOpString(opcode.op), opcode.wordCount);
+  SKIP_CURRENT_OPCODE();
   GO_NEXT
 }
 
@@ -93,10 +93,6 @@ Runtime::Runtime() : heapSize_(0), heap_(nullptr) {
   REG_OP_FUNC(SpvOpImageSampleProjDrefImplicitLod)
   REG_OP_FUNC(SpvOpImageSampleProjDrefExplicitLod)
   REG_OP_FUNC(SpvOpImageFetch)
-  REG_OP_FUNC(SpvOpImageGather)
-  REG_OP_FUNC(SpvOpImageDrefGather)
-  REG_OP_FUNC(SpvOpImageRead)
-  REG_OP_FUNC(SpvOpImageWrite)
   REG_OP_FUNC(SpvOpImage)
   REG_OP_FUNC(SpvOpImageQueryFormat)
   REG_OP_FUNC(SpvOpImageQueryOrder)
@@ -243,7 +239,6 @@ bool Runtime::initWithModule(SpvmModule *module, SpvmWord heapSize) {
   heapSize_ = heapSize;
   heap_ = new SpvmByte[heapSize_];
 
-  ctx_.inited = false;
   ctx_.runtime = this;
   ctx_.module = module;
   ctx_.resultIds = (void **) heap_;
@@ -272,7 +267,7 @@ bool Runtime::initWithModule(SpvmModule *module, SpvmWord heapSize) {
     LOGE("initWithModule error: %d", (SpvmI32)result);
     return false;
   }
-  ctx->inited = true;
+  module->inited = true;
   interface_.init(ctx, ctx->resultIds);
   return true;
 }

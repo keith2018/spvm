@@ -37,6 +37,7 @@ class SpvmModule {
   std::unordered_map<SpvmWord, std::vector<SpvmDecoration>> decorations;
   std::vector<SpvmWord> globalPointers;
 
+  bool inited = false;
  public:
   SpvmModule();
   ~SpvmModule();

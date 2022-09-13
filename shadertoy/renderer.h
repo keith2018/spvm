@@ -46,11 +46,6 @@ typedef struct UniformInput_ {
   float iSampleRate;            // sound sample rate (i.e., 44100)
 } UniformInput;
 
-typedef struct SpvmExecContext_ {
-  SPVM::SpvmModule module;
-  SPVM::Runtime runtime;
-} SpvmExecContext;
-
 class Renderer {
  public:
   Renderer();
@@ -79,7 +74,9 @@ class Renderer {
   Settings settings_;
   int rasterBlockSize_ = 32;
   ThreadPool threadPool_;
-  std::vector<SpvmExecContext> spvmContexts_;
+
+  SpvmModule *module_ = nullptr;
+  std::vector<Runtime> runtimes_;
 
   std::string shaderWrapperStr_;
   std::vector<uint32_t> spvBytes_;

@@ -84,7 +84,7 @@ void Interface::writeInput(void *data, SpvmWord location) {
 void Interface::writeInputBuiltIn(void *data, SpvBuiltIn builtIn) {
   auto it = inoutBuiltIn_.find(builtIn);
   if (it == inoutBuiltIn_.end()) {
-    LOGI("writeInputBuiltIn ignored, builtIn not used: %d", builtIn);
+    LOGW("writeInputBuiltIn ignored, builtIn not used: %d", builtIn);
     return;
   }
 
