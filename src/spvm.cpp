@@ -196,7 +196,7 @@ SpvmVec4 getDPdx(void *ctx, SpvmWord P) {
   SpvmVec4 ret{0, 0, 0, 0};
   RuntimeContext *rtCtx = (RuntimeContext *) ctx;
   if (rtCtx->quadCtx == nullptr) {
-    LOGE("getDPdx error: no quad context");
+//    LOGE("getDPdx error: no quad context");
     return ret;
   }
   SpvmValue *dx = rtCtx->quadCtx->getDPdx(rtCtx->quadIdx, P);
@@ -208,7 +208,7 @@ SpvmVec4 getDPdy(void *ctx, SpvmWord P) {
   SpvmVec4 ret{0, 0, 0, 0};
   RuntimeContext *rtCtx = (RuntimeContext *) ctx;
   if (rtCtx->quadCtx == nullptr) {
-    LOGE("getDPdx error: no quad context");
+//    LOGE("getDPdx error: no quad context");
     return ret;
   }
   SpvmValue *dy = rtCtx->quadCtx->getDPdy(rtCtx->quadIdx, P);
