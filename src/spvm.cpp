@@ -5,7 +5,7 @@
  */
 
 #include "spvm.h"
-#include "image.h"
+#include "quad.h"
 #include "opstrings.h"
 #include "logger.h"
 
@@ -182,14 +182,38 @@ SpvmVec4 readFromValue(SpvmValue *value) {
   return retVec;
 }
 
-SpvmVec4 getDPdx(SpvmWord P) {
-  // TODO
-  return {0, 0, 0, 0};
+void valueSubF32(SpvmValue *ret, SpvmValue *a, SpvmValue *b) {
+  if (ret->memberCnt > 0) {
+    for (SpvmWord i = 0; i < ret->memberCnt; i++) {
+      ret->VECTOR_f32(i) = a->VECTOR_f32(i) - b->VECTOR_f32(i);
+    }
+  } else {
+    ret->value.f32 = a->value.f32 - b->value.f32;
+  }
 }
 
-SpvmVec4 getDPdy(SpvmWord P) {
-  // TODO
-  return {0, 0, 0, 0};
+SpvmVec4 getDPdx(void *ctx, SpvmWord P) {
+  SpvmVec4 ret{0, 0, 0, 0};
+  RuntimeContext *rtCtx = (RuntimeContext *) ctx;
+  if (rtCtx->quadCtx == nullptr) {
+    LOGE("getDPdx error: no quad context");
+    return ret;
+  }
+  SpvmValue *dx = rtCtx->quadCtx->getDPdx(rtCtx->quadIdx, P);
+  ret = readFromValue(dx);
+  return ret;
+}
+
+SpvmVec4 getDPdy(void *ctx, SpvmWord P) {
+  SpvmVec4 ret{0, 0, 0, 0};
+  RuntimeContext *rtCtx = (RuntimeContext *) ctx;
+  if (rtCtx->quadCtx == nullptr) {
+    LOGE("getDPdx error: no quad context");
+    return ret;
+  }
+  SpvmValue *dy = rtCtx->quadCtx->getDPdy(rtCtx->quadIdx, P);
+  ret = readFromValue(dy);
+  return ret;
 }
 
 }

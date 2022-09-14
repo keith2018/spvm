@@ -609,15 +609,15 @@ void generateMipmaps(SpvmSampledImage *sampledImage) {
 }
 
 // calculate ρ_max
-SpvmF32 getDerivativeRhoMax(SpvmWord coordinateId, SpvmImageOperands *operands, SpvmImageInfo *imageInfo) {
+SpvmF32 getDerivativeRhoMax(void *ctx, SpvmWord coordinateId, SpvmImageOperands *operands, SpvmImageInfo *imageInfo) {
   SpvmVec4 mx{0, 0, 0, 0};
   SpvmVec4 my{0, 0, 0, 0};
   if (operands && operands->dx && operands->dy) {
     mx = readFromValue(operands->dx);
     my = readFromValue(operands->dy);
   } else {
-    mx = getDPdx(coordinateId);
-    my = getDPdy(coordinateId);
+    mx = getDPdx(ctx, coordinateId);
+    my = getDPdy(ctx, coordinateId);
   }
 
   SpvmVec4 sizeInfo = {(SpvmI32) imageInfo->width, (SpvmI32) imageInfo->height, (SpvmI32) imageInfo->depth, 0};
@@ -631,12 +631,16 @@ SpvmF32 getDerivativeRhoMax(SpvmWord coordinateId, SpvmImageOperands *operands, 
   return fMax(rhoX, rhoY);
 }
 
-SpvmF32 getLodLambda(SpvmImage *image, SpvmSampler *sampler, SpvmWord coordinateId, SpvmImageOperands *operands) {
+SpvmF32 getLodLambda(void *ctx,
+                     SpvmImage *image,
+                     SpvmSampler *sampler,
+                     SpvmWord coordinateId,
+                     SpvmImageOperands *operands) {
   SpvmF32 lambdaBase = 0.f;
   if (operands && operands->lod) {
     lambdaBase = operands->lod->value.f32;
   } else {
-    lambdaBase = log2f(getDerivativeRhoMax(coordinateId, operands, &image->info));   // isotropic, η = 1
+    lambdaBase = log2f(getDerivativeRhoMax(ctx, coordinateId, operands, &image->info));   // isotropic, η = 1
   }
   SpvmF32 samplerBias = sampler->info.mipLodBias;
   SpvmF32 shaderOpBias = (operands && operands->bias) ? operands->bias->value.f32 : 0.f;
@@ -723,7 +727,8 @@ SpvmVec4 getImageSize(SpvmImage *image) {
   return ret;
 }
 
-void sampleImage(SpvmValue *retValue,
+void sampleImage(void *ctx,
+                 SpvmValue *retValue,
                  SpvmValue *sampledImageValue,
                  SpvmValue *coordinateValue,
                  SpvmWord coordinateId,
@@ -759,7 +764,7 @@ void sampleImage(SpvmValue *retValue,
   SpvmVec4 retTexel;
 
   // lod & level
-  SpvmF32 lodLambda = getLodLambda(image, sampler, coordinateId, operands);
+  SpvmF32 lodLambda = getLodLambda(ctx, image, sampler, coordinateId, operands);
   SpvmF32 lodLevel = getComputeAccessedLod(image, sampler, lodLambda);
   SpvSamplerFilterMode filterMode = (lodLambda <= 0) ? sampler->info.magFilter : sampler->info.minFilter;
 
@@ -787,7 +792,8 @@ void sampleImage(SpvmValue *retValue,
   writeToValue(retValue, retTexel);
 }
 
-void fetchImage(SpvmValue *retValue,
+void fetchImage(void *ctx,
+                SpvmValue *retValue,
                 SpvmValue *imageValue,
                 SpvmValue *coordinateValue,
                 SpvmWord coordinateId,
@@ -832,7 +838,7 @@ void fetchImage(SpvmValue *retValue,
   writeToValue(retValue, retTexel);
 }
 
-void queryImageFormat(SpvmValue *retValue, SpvmValue *imageValue) {
+void queryImageFormat(void *ctx, SpvmValue *retValue, SpvmValue *imageValue) {
   SpvmImage *image = (SpvmImage *) imageValue->value.image->opaque;
   if (!image) {
     LOGE("queryImageFormat error: image is null");
@@ -854,7 +860,7 @@ void queryImageFormat(SpvmValue *retValue, SpvmValue *imageValue) {
   retValue->value.i32 = ret;
 }
 
-void queryImageOrder(SpvmValue *retValue, SpvmValue *imageValue) {
+void queryImageOrder(void *ctx, SpvmValue *retValue, SpvmValue *imageValue) {
   SpvmImage *image = (SpvmImage *) imageValue->value.image->opaque;
   if (!image) {
     LOGE("queryImageOrder error: image is null");
@@ -882,7 +888,7 @@ void queryImageOrder(SpvmValue *retValue, SpvmValue *imageValue) {
   retValue->value.i32 = ret;
 }
 
-void queryImageSizeLod(SpvmValue *retValue, SpvmValue *imageValue, SpvmValue *lodValue) {
+void queryImageSizeLod(void *ctx, SpvmValue *retValue, SpvmValue *imageValue, SpvmValue *lodValue) {
   SpvmImage *image = (SpvmImage *) imageValue->value.image->opaque;
   if (!image) {
     LOGE("queryImageSizeLod error: image is null");
@@ -892,7 +898,7 @@ void queryImageSizeLod(SpvmValue *retValue, SpvmValue *imageValue, SpvmValue *lo
   writeToValue(retValue, sizeInfo);
 }
 
-void queryImageSize(SpvmValue *retValue, SpvmValue *imageValue) {
+void queryImageSize(void *ctx, SpvmValue *retValue, SpvmValue *imageValue) {
   SpvmImage *image = (SpvmImage *) imageValue->value.image->opaque;
   if (!image) {
     LOGE("queryImageSize error: image is null");
@@ -902,7 +908,9 @@ void queryImageSize(SpvmValue *retValue, SpvmValue *imageValue) {
   writeToValue(retValue, sizeInfo);
 }
 
-void queryImageLod(SpvmValue *retValue, SpvmValue *sampledImageValue,
+void queryImageLod(void *ctx,
+                   SpvmValue *retValue,
+                   SpvmValue *sampledImageValue,
                    SpvmValue *coordinateValue,
                    SpvmWord coordinateId) {
   SpvmImage *image = (SpvmImage *) sampledImageValue->value.sampledImage->image->opaque;
@@ -911,13 +919,13 @@ void queryImageLod(SpvmValue *retValue, SpvmValue *sampledImageValue,
     LOGE("queryImageLod error: image or sampler is null");
     return;
   }
-  SpvmF32 lodLambda = getLodLambda(image, sampler, coordinateId, nullptr);
+  SpvmF32 lodLambda = getLodLambda(ctx, image, sampler, coordinateId, nullptr);
   SpvmF32 lodLevel = getComputeAccessedLod(image, sampler, lodLambda);
   retValue->value.members[0]->value.f32 = lodLambda;
   retValue->value.members[1]->value.f32 = lodLevel;
 }
 
-void queryImageLevels(SpvmValue *retValue, SpvmValue *imageValue) {
+void queryImageLevels(void *ctx, SpvmValue *retValue, SpvmValue *imageValue) {
   SpvmImage *image = (SpvmImage *) imageValue->value.image->opaque;
   if (!image) {
     LOGE("queryImageLevels error: image is null");
@@ -926,7 +934,7 @@ void queryImageLevels(SpvmValue *retValue, SpvmValue *imageValue) {
   retValue->value.u32 = image->info.mipLevels;
 }
 
-void queryImageSamples(SpvmValue *retValue, SpvmValue *imageValue) {
+void queryImageSamples(void *ctx, SpvmValue *retValue, SpvmValue *imageValue) {
   SpvmImage *image = (SpvmImage *) imageValue->value.image->opaque;
   if (!image) {
     LOGE("queryImageSamples error: image is null");

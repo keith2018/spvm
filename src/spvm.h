@@ -16,6 +16,18 @@ namespace SPVM {
 
 #define EXT_GLSLstd450 "GLSL.std.450"
 
+#define VECTOR_boolean(idx) value.members[(idx)]->value.boolean
+#define VECTOR_i32(idx)  value.members[(idx)]->value.i32
+#define VECTOR_u32(idx)  value.members[(idx)]->value.u32
+#define VECTOR_f32(idx)  value.members[(idx)]->value.f32
+#define VECTOR_value(idx)  value.members[(idx)]->value
+
+#define MATRIX_boolean(col, row) value.members[(col)]->value.members[(row)]->value.boolean
+#define MATRIX_i32(col, row)  value.members[(col)]->value.members[(row)]->value.i32
+#define MATRIX_u32(col, row)  value.members[(col)]->value.members[(row)]->value.u32
+#define MATRIX_f32(col, row)  value.members[(col)]->value.members[(row)]->value.f32
+#define MATRIX_value(col, row)  value.members[(col)]->value.members[(row)]->value
+
 typedef void      SpvmVoid;
 typedef uint8_t   SpvmByte;
 typedef uint32_t  SpvmWord;
@@ -210,12 +222,6 @@ typedef struct SpvmValue_ {
   } value;
 } SpvmValue;
 
-typedef struct SpvmResult_ {
-  void *value;
-  void *dx;
-  void *dy;
-} SpvmResult;
-
 typedef struct SpvmPointer_ {
   SpvmTypePointer *resultType;
   SpvmValue *objPtr;
@@ -254,7 +260,10 @@ void copyValue(SpvmValue *dst, SpvmValue *src);
 SpvmWord getTypeSize(SpvmTypeBase *type);
 void writeToValue(SpvmValue *retValue, SpvmVec4 vec);
 SpvmVec4 readFromValue(SpvmValue *value);
-SpvmVec4 getDPdx(SpvmWord P);
-SpvmVec4 getDPdy(SpvmWord P);
+
+void valueSubF32(SpvmValue *ret, SpvmValue *a, SpvmValue *b);
+
+SpvmVec4 getDPdx(void *ctx, SpvmWord P);
+SpvmVec4 getDPdy(void *ctx, SpvmWord P);
 
 }
