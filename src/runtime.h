@@ -38,7 +38,7 @@ typedef enum {
 typedef struct RuntimeContext {
   Runtime *runtime;
   SpvmModule *module;
-  void **resultIds;
+  SpvmResult *results;
   SpvmByte *stackBase;
   SpvmFrame *currFrame;
 #ifndef SPVM_OP_DISPATCH_TAIL_CALL

@@ -22,7 +22,7 @@ static RuntimeResult func_GLSLstd450_NotSupport(SpvmWord *pc, SpvmByte *sp, Spvm
   SpvmValue *ret = CREATE_VALUE(resultType);                                          \
 
 #define END_EXT_FUNCTION                                                              \
-  ctx->resultIds[resultId] = ret;                                                     \
+  ctx->results[resultId].value = ret;                                                 \
   GO_NEXT                                                                             \
 
 #define GLSL_MATH_ONE_IMPL(RetType, OpType, OP)                                       \
@@ -210,7 +210,7 @@ DEF_GLSL_OP_FUNC(MatrixInverse) {
 DEF_GLSL_OP_FUNC(Modf) {
   BEGIN_EXT_FUNCTION
   SpvmValue *x = READ_OPERAND();
-  SpvmPointer *pointer = (SpvmPointer *) ctx->resultIds[READ_WORD()];
+  SpvmPointer *pointer = (SpvmPointer *) ctx->results[READ_WORD()].value;
   SpvmValue *y = pointer->objPtr;
   if (x->memberCnt > 0) {
     for (SpvmWord i = 0; i < x->memberCnt; i++) {
@@ -284,7 +284,7 @@ DEF_GLSL_OP_FUNC(Fma) {
 DEF_GLSL_OP_FUNC(Frexp) {
   BEGIN_EXT_FUNCTION
   SpvmValue *x = READ_OPERAND();
-  SpvmPointer *pointer = (SpvmPointer *) ctx->resultIds[READ_WORD()];
+  SpvmPointer *pointer = (SpvmPointer *) ctx->results[READ_WORD()].value;
   SpvmValue *exp = pointer->objPtr;
   if (x->memberCnt > 0) {
     for (SpvmWord i = 0; i < x->memberCnt; i++) {

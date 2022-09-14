@@ -238,14 +238,15 @@ bool Runtime::initWithModule(SpvmModule *module, SpvmWord heapSize) {
 
   heapSize_ = heapSize;
   heap_ = new SpvmByte[heapSize_];
+  memset(heap_, 0, heapSize_ * sizeof(SpvmByte));
 
   ctx_.runtime = this;
   ctx_.module = module;
-  ctx_.resultIds = (void **) heap_;
+  ctx_.results = (SpvmResult *) heap_;
   ctx_.currFrame = nullptr;
 
   SpvmWord *pc = ctx_.module->code;
-  SpvmByte *sp = heap_ + module->bound * sizeof(void *);
+  SpvmByte *sp = heap_ + module->bound * sizeof(SpvmResult);
   RuntimeContext *ctx = &ctx_;
   RuntimeResult result = Result_NoError;
 
@@ -264,11 +265,11 @@ bool Runtime::initWithModule(SpvmModule *module, SpvmWord heapSize) {
 #endif
 
   if (result != Result_InitEnd) {
-    LOGE("initWithModule error: %d", (SpvmI32)result);
+    LOGE("initWithModule error: %d", (SpvmI32) result);
     return false;
   }
   module->inited = true;
-  interface_.init(ctx, ctx->resultIds);
+  interface_.init(ctx);
   return true;
 }
 
@@ -285,7 +286,7 @@ bool Runtime::execEntryPoint(SpvmWord entryIdx) {
 }
 
 RuntimeResult Runtime::invokeFunction(SpvmWord funcId) {
-  auto *func = (SpvmFunction *) ctx_.resultIds[funcId];
+  auto *func = (SpvmFunction *) ctx_.results[funcId].value;
   SpvmByte *sp = ctx_.stackBase;
 
   // create frame
@@ -308,7 +309,7 @@ RuntimeResult Runtime::invokeFunction(SpvmWord funcId) {
 #else
   ctx->pc = pc;
   ctx->sp = sp;
-  while(result == Result_NoError) {
+  while (result == Result_NoError) {
     pc = ctx->pc;
     sp = ctx->sp;
     SpvmOpcode opcode = READ_OPCODE();

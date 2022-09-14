@@ -35,12 +35,12 @@ static OpFunction __opFuncs[__opFuncCnt];
 #define REWIND_WORD_N(count) pc -= (count)
 #define READ_STR() readString(&pc, &sp)
 #define READ_OPCODE() readOpcode(pc++)
-#define READ_OPERAND() (SpvmValue *) ctx->resultIds[READ_WORD()]
+#define READ_OPERAND() (SpvmValue *) ctx->results[READ_WORD()].value
 
 #define HEAP_MALLOC(n) sp; sp += (n)
 #define CREATE_VALUE(type) createValue((type), &sp)
 #define COPY_VALUE(dst, src) copyValue((dst), (src))
-#define SPVM_TYPE(typeId) ((SpvmTypeBase *) ctx->resultIds[(typeId)])
+#define SPVM_TYPE(typeId) ((SpvmTypeBase *) ctx->results[(typeId)].value)
 
 #define VECTOR_boolean(idx) value.members[(idx)]->value.boolean
 #define VECTOR_i32(idx)  value.members[(idx)]->value.i32
@@ -247,7 +247,7 @@ DEF_OP_FUNC(SpvOpExtInstImport) {
     ext->setId = resultId;
     ext->insCnt = GLSLstd450Count;
     registerGLSLstd450(&ext->insPtr[0], ext->insCnt);
-    ctx->resultIds[resultId] = ext;
+    ctx->results[resultId].value = ext;
   } else {
     LOGE("ExtInstImport not support: %s", extName.str);
     return Result_Error;
@@ -258,7 +258,7 @@ DEF_OP_FUNC(SpvOpExtInstImport) {
 
 DEF_OP_FUNC(SpvOpExtInst) {
   SKIP_WORD_N(2);
-  SpvmExtInstImport *ext = (SpvmExtInstImport *) ctx->resultIds[READ_WORD()];
+  SpvmExtInstImport *ext = (SpvmExtInstImport *) ctx->results[READ_WORD()].value;
   OpFunction extFunc = (OpFunction) ext->insPtr[READ_WORD()];
   REWIND_WORD_N(4);
   return extFunc(pc, sp, opcode, ctx);
@@ -329,7 +329,7 @@ DEF_OP_FUNC(SpvOpCapability) {
     type->resultId = READ_WORD();                                   \
 
 #define PARSE_TYPE_END                                              \
-    ctx->resultIds[type->resultId] = type;                          \
+    ctx->results[type->resultId].value = type;                      \
 
 DEF_OP_FUNC(SpvOpTypeVoid) {
   PARSE_TYPE_BEGIN(Void)
@@ -468,7 +468,7 @@ DEF_OP_FUNC(SpvOpConstantTrue) {
   SpvmWord resultId = READ_WORD();
   SpvmValue *var = CREATE_VALUE(resultType);
   var->value.boolean = true;
-  ctx->resultIds[resultId] = var;
+  ctx->results[resultId].value = var;
   GO_NEXT
 }
 
@@ -477,7 +477,7 @@ DEF_OP_FUNC(SpvOpConstantFalse) {
   SpvmWord resultId = READ_WORD();
   SpvmValue *var = CREATE_VALUE(resultType);
   var->value.boolean = false;
-  ctx->resultIds[resultId] = var;
+  ctx->results[resultId].value = var;
   GO_NEXT
 }
 
@@ -493,7 +493,7 @@ DEF_OP_FUNC(SpvOpConstant) {
     LOGE("SpvOpConstant value bit width not support: %d", numberWidth);
     return Result_Error;
   }
-  ctx->resultIds[resultId] = var;
+  ctx->results[resultId].value = var;
   GO_NEXT
 }
 
@@ -505,7 +505,7 @@ DEF_OP_FUNC(SpvOpConstantComposite) {
   for (SpvmWord i = 0; i < idxCnt; i++) {
     var->value.members[i] = READ_OPERAND();
   }
-  ctx->resultIds[resultId] = var;
+  ctx->results[resultId].value = var;
   GO_NEXT
 }
 
@@ -520,7 +520,7 @@ DEF_OP_FUNC(SpvOpConstantSampler) {
   var->value.sampler->attributes = attributes;
   // create sampler opaque with attributes
   var->value.sampler->opaque = createSamplerConstant(attributes);
-  ctx->resultIds[resultId] = var;
+  ctx->results[resultId].value = var;
   GO_NEXT
 }
 
@@ -528,7 +528,7 @@ DEF_OP_FUNC(SpvOpConstantNull) {
   SpvmTypeBase *resultType = SPVM_TYPE(READ_WORD());
   SpvmWord resultId = READ_WORD();
   SpvmValue *var = CREATE_VALUE(resultType);
-  ctx->resultIds[resultId] = var;
+  ctx->results[resultId].value = var;
   GO_NEXT
 }
 
@@ -548,7 +548,7 @@ DEF_OP_FUNC(SpvOpVariable) {
   }
 
   pointer->objPtr = CREATE_VALUE(pointer->resultType->objType);
-  ctx->resultIds[resultId] = pointer;
+  ctx->results[resultId].value = pointer;
 
   GO_NEXT
 }
@@ -562,8 +562,8 @@ DEF_OP_FUNC(SpvOpLoad) {
     LOGE("OpLoad memoryOperands not implement");
   }
 
-  SpvmPointer *pointer = (SpvmPointer *) ctx->resultIds[pointerId];
-  ctx->resultIds[resultId] = pointer->objPtr;
+  SpvmPointer *pointer = (SpvmPointer *) ctx->results[pointerId].value;
+  ctx->results[resultId].value = pointer->objPtr;
   GO_NEXT
 }
 
@@ -575,8 +575,8 @@ DEF_OP_FUNC(SpvOpStore) {
     LOGE("OpStore memoryOperands not implement");
   }
 
-  SpvmPointer *pointer = (SpvmPointer *) ctx->resultIds[pointerId];
-  SpvmValue *obj = (SpvmValue *) ctx->resultIds[objId];
+  SpvmPointer *pointer = (SpvmPointer *) ctx->results[pointerId].value;
+  SpvmValue *obj = (SpvmValue *) ctx->results[objId].value;
   COPY_VALUE(pointer->objPtr, obj);
   GO_NEXT
 }
@@ -588,7 +588,7 @@ DEF_OP_FUNC(SpvOpAccessChain) {
 
   SpvmWord baseId = READ_WORD();
   SpvmWord idxCnt = opcode.wordCount - 4;
-  SpvmPointer *base = (SpvmPointer *) ctx->resultIds[baseId];
+  SpvmPointer *base = (SpvmPointer *) ctx->results[baseId].value;
   SpvmValue *valuePtr = base->objPtr;
   for (SpvmWord i = 0; i < idxCnt; i++) {
     SpvmValue *memberIdx = READ_OPERAND();
@@ -600,18 +600,18 @@ DEF_OP_FUNC(SpvOpAccessChain) {
   }
 
   pointer->objPtr = valuePtr;
-  ctx->resultIds[resultId] = pointer;
+  ctx->results[resultId].value = pointer;
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpArrayLength) {
   SpvmTypeBase *resultType = SPVM_TYPE(READ_WORD());
   SpvmWord resultId = READ_WORD();
-  SpvmPointer *ptr = (SpvmPointer *) ctx->resultIds[READ_WORD()];
+  SpvmPointer *ptr = (SpvmPointer *) ctx->results[READ_WORD()].value;
   SpvmValue *runtimeArr = ptr->objPtr->value.members[READ_WORD()];
   SpvmValue *ret = CREATE_VALUE(resultType);
   ret->value.u32 = runtimeArr->memberCnt;
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
@@ -622,7 +622,7 @@ DEF_OP_FUNC(SpvOpFunction) {
   func->functionControl = READ_WORD();
   func->functionType = SPVM_TYPE(READ_WORD());
   func->code = pc;
-  ctx->resultIds[resultId] = func;
+  ctx->results[resultId].value = func;
 
   // skip function codes
   SpvmOpcode insOp = READ_OPCODE();
@@ -630,7 +630,7 @@ DEF_OP_FUNC(SpvOpFunction) {
     // OpLabel
     if (insOp.op == SpvOpLabel) {
       SpvmWord labelId = READ_WORD();
-      ctx->resultIds[labelId] = pc - 2;  // include OpLabel
+      ctx->results[labelId].value = pc - 2;  // include OpLabel
     } else {
       SKIP_WORD_N(insOp.wordCount - 1);
     }
@@ -652,7 +652,7 @@ DEF_OP_FUNC(SpvOpFunctionParameter) {
   SpvmWord resultId = READ_WORD();
   auto &frame = ctx->currFrame;
   void *param = frame->params[frame->paramsIdx++];
-  ctx->resultIds[resultId] = param;
+  ctx->results[resultId].value = param;
   GO_NEXT
 }
 
@@ -673,12 +673,12 @@ DEF_OP_FUNC(SpvOpFunctionEnd) {
 DEF_OP_FUNC(SpvOpFunctionCall) {
   SKIP_WORD(); // result type
   SpvmWord resultId = READ_WORD();
-  SpvmFunction *func = (SpvmFunction *) ctx->resultIds[READ_WORD()];
+  SpvmFunction *func = (SpvmFunction *) ctx->results[READ_WORD()].value;
 
   // result
   SpvmTypeFunction *funcType = (SpvmTypeFunction *) func->functionType;
   SpvmValue *retValue = CREATE_VALUE(funcType->returnType);
-  ctx->resultIds[resultId] = retValue;
+  ctx->results[resultId].value = retValue;
 
   // create frame
   SpvmFrame *prevFrame = ctx->currFrame;
@@ -692,7 +692,7 @@ DEF_OP_FUNC(SpvOpFunctionCall) {
   SpvmWord idxCnt = opcode.wordCount - 4;
   void **params = (void **) HEAP_MALLOC(idxCnt * sizeof(void *));
   for (SpvmWord i = 0; i < idxCnt; i++) {
-    params[i] = ctx->resultIds[READ_WORD()];
+    params[i] = ctx->results[READ_WORD()].value;
   }
   ctx->currFrame->paramsIdx = 0;
   ctx->currFrame->params = params;
@@ -720,101 +720,101 @@ DEF_OP_FUNC(SpvOpSampledImage) {
   READ_TWO_OPERAND
   ret->value.sampledImage->image = operand1->value.image;
   ret->value.sampledImage->sampler = operand2->value.sampler;
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpImageSampleImplicitLod) {
   READ_ONE_OPERAND
   SpvmWord coordinateId = READ_WORD();
-  SpvmValue *coordinate = (SpvmValue *) ctx->resultIds[coordinateId];
+  SpvmValue *coordinate = (SpvmValue *) ctx->results[coordinateId].value;
   SpvmImageOperands operands = readImageOperands(&pc, ctx, opcode.wordCount - 5);
   sampleImage(ret, operand, coordinate, coordinateId, &operands);
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpImageSampleExplicitLod) {
   READ_ONE_OPERAND
   SpvmWord coordinateId = READ_WORD();
-  SpvmValue *coordinate = (SpvmValue *) ctx->resultIds[coordinateId];
+  SpvmValue *coordinate = (SpvmValue *) ctx->results[coordinateId].value;
   SpvmImageOperands operands = readImageOperands(&pc, ctx, opcode.wordCount - 5);
   sampleImage(ret, operand, coordinate, coordinateId, &operands);
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpImageSampleDrefImplicitLod) {
   READ_ONE_OPERAND
   SpvmWord coordinateId = READ_WORD();
-  SpvmValue *coordinate = (SpvmValue *) ctx->resultIds[coordinateId];
+  SpvmValue *coordinate = (SpvmValue *) ctx->results[coordinateId].value;
   SpvmValue *depthCompare = READ_OPERAND();
   SpvmImageOperands operands = readImageOperands(&pc, ctx, opcode.wordCount - 6);
   sampleImage(ret, operand, coordinate, coordinateId, &operands, depthCompare);
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpImageSampleDrefExplicitLod) {
   READ_ONE_OPERAND
   SpvmWord coordinateId = READ_WORD();
-  SpvmValue *coordinate = (SpvmValue *) ctx->resultIds[coordinateId];
+  SpvmValue *coordinate = (SpvmValue *) ctx->results[coordinateId].value;
   SpvmValue *depthCompare = READ_OPERAND();
   SpvmImageOperands operands = readImageOperands(&pc, ctx, opcode.wordCount - 6);
   sampleImage(ret, operand, coordinate, coordinateId, &operands, depthCompare);
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpImageSampleProjImplicitLod) {
   READ_ONE_OPERAND
   SpvmWord coordinateId = READ_WORD();
-  SpvmValue *coordinate = (SpvmValue *) ctx->resultIds[coordinateId];
+  SpvmValue *coordinate = (SpvmValue *) ctx->results[coordinateId].value;
   SpvmImageOperands operands = readImageOperands(&pc, ctx, opcode.wordCount - 5);
   sampleImage(ret, operand, coordinate, coordinateId, &operands, nullptr, true);
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpImageSampleProjExplicitLod) {
   READ_ONE_OPERAND
   SpvmWord coordinateId = READ_WORD();
-  SpvmValue *coordinate = (SpvmValue *) ctx->resultIds[coordinateId];
+  SpvmValue *coordinate = (SpvmValue *) ctx->results[coordinateId].value;
   SpvmImageOperands operands = readImageOperands(&pc, ctx, opcode.wordCount - 5);
   sampleImage(ret, operand, coordinate, coordinateId, &operands, nullptr, true);
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpImageSampleProjDrefImplicitLod) {
   READ_ONE_OPERAND
   SpvmWord coordinateId = READ_WORD();
-  SpvmValue *coordinate = (SpvmValue *) ctx->resultIds[coordinateId];
+  SpvmValue *coordinate = (SpvmValue *) ctx->results[coordinateId].value;
   SpvmValue *depthCompare = READ_OPERAND();
   SpvmImageOperands operands = readImageOperands(&pc, ctx, opcode.wordCount - 6);
   sampleImage(ret, operand, coordinate, coordinateId, &operands, depthCompare, true);
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpImageSampleProjDrefExplicitLod) {
   READ_ONE_OPERAND
   SpvmWord coordinateId = READ_WORD();
-  SpvmValue *coordinate = (SpvmValue *) ctx->resultIds[coordinateId];
+  SpvmValue *coordinate = (SpvmValue *) ctx->results[coordinateId].value;
   SpvmValue *depthCompare = READ_OPERAND();
   SpvmImageOperands operands = readImageOperands(&pc, ctx, opcode.wordCount - 6);
   sampleImage(ret, operand, coordinate, coordinateId, &operands, depthCompare, true);
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpImageFetch) {
   READ_ONE_OPERAND
   SpvmWord coordinateId = READ_WORD();
-  SpvmValue *coordinate = (SpvmValue *) ctx->resultIds[coordinateId];
+  SpvmValue *coordinate = (SpvmValue *) ctx->results[coordinateId].value;
   SpvmImageOperands operands = readImageOperands(&pc, ctx, opcode.wordCount - 5);
   fetchImage(ret, operand, coordinate, coordinateId, &operands);
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
@@ -826,21 +826,21 @@ DEF_OP_FUNC(SpvOpImage) {
   ret->type = resultType;
   ret->memberCnt = resultType->memberCnt;
   ret->value.image = sampledImage->value.sampledImage->image;
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpImageQueryFormat) {
   READ_ONE_OPERAND
   queryImageFormat(ret, operand);
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpImageQueryOrder) {
   READ_ONE_OPERAND
   queryImageOrder(ret, operand);
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
@@ -848,37 +848,37 @@ DEF_OP_FUNC(SpvOpImageQuerySizeLod) {
   READ_ONE_OPERAND
   SpvmValue *lod = READ_OPERAND();
   queryImageSizeLod(ret, operand, lod);
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpImageQuerySize) {
   READ_ONE_OPERAND
   queryImageSize(ret, operand);
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpImageQueryLod) {
   READ_ONE_OPERAND
   SpvmWord coordinateId = READ_WORD();
-  SpvmValue *coordinate = (SpvmValue *) ctx->resultIds[coordinateId];
+  SpvmValue *coordinate = (SpvmValue *) ctx->results[coordinateId].value;
   queryImageLod(ret, operand, coordinate, coordinateId);
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpImageQueryLevels) {
   READ_ONE_OPERAND
   queryImageLevels(ret, operand);
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpImageQuerySamples) {
   READ_ONE_OPERAND
   queryImageSamples(ret, operand);
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
@@ -891,7 +891,7 @@ DEF_OP_FUNC(SpvOpImageQuerySamples) {
   } else {                                                                                    \
     ret->value.DValue = (DType) operand->value.SValue;                                        \
   }                                                                                           \
-  ctx->resultIds[resultId] = ret;                                                             \
+  ctx->results[resultId].value = ret;                                                         \
 
 
 DEF_OP_FUNC(SpvOpConvertFToU) {
@@ -936,7 +936,7 @@ DEF_OP_FUNC(SpvOpVectorShuffle) {
       retValue->value.members[i] = vec2->value.members[idx - vec1->memberCnt];
     }
   }
-  ctx->resultIds[resultId] = retValue;
+  ctx->results[resultId].value = retValue;
   GO_NEXT
 }
 
@@ -951,7 +951,7 @@ DEF_OP_FUNC(SpvOpCompositeConstruct) {
   for (SpvmWord i = 0; i < retValue->memberCnt; i++) {
     retValue->value.members[i] = READ_OPERAND();
   }
-  ctx->resultIds[resultId] = retValue;
+  ctx->results[resultId].value = retValue;
   GO_NEXT
 }
 
@@ -960,14 +960,14 @@ DEF_OP_FUNC(SpvOpCompositeExtract) {
   SpvmWord resultId = READ_WORD();
   SpvmWord compositeId = READ_WORD();
 
-  SpvmValue *composite = (SpvmValue *) ctx->resultIds[compositeId];
+  SpvmValue *composite = (SpvmValue *) ctx->results[compositeId].value;
   SpvmWord idxCnt = opcode.wordCount - 4;
   while (idxCnt > 0) {
     idxCnt--;
     SpvmWord memberIdx = READ_WORD();
     composite = composite->value.members[memberIdx];
   }
-  ctx->resultIds[resultId] = composite;
+  ctx->results[resultId].value = composite;
   GO_NEXT
 }
 
@@ -977,7 +977,7 @@ DEF_OP_FUNC(SpvOpCopyObject) {
   SpvmValue *operand = READ_OPERAND();
   SpvmValue *ret = CREATE_VALUE(operand->type);
   copyValue(ret, operand);
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
@@ -993,7 +993,7 @@ DEF_OP_FUNC(SpvOpTranspose) {
       ret->MATRIX_value(i, j) = operand->MATRIX_value(j, i);
     }
   }
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
@@ -1006,7 +1006,7 @@ DEF_OP_FUNC(SpvOpTranspose) {
   } else {                                                        \
     ret->value.RetType = OP(operand->value.OpType);               \
   }                                                               \
-  ctx->resultIds[resultId] = ret;                                 \
+  ctx->results[resultId].value = ret;                             \
 
 #define SPVM_MATH_TWO_IMPL(RetType, OpType, OP)                                                   \
   READ_TWO_OPERAND                                                                                \
@@ -1017,7 +1017,7 @@ DEF_OP_FUNC(SpvOpTranspose) {
   } else {                                                                                        \
     ret->value.RetType = (operand1->value.OpType OP operand2->value.OpType);                      \
   }                                                                                               \
-  ctx->resultIds[resultId] = ret;                                                                 \
+  ctx->results[resultId].value = ret;                                                             \
 
 DEF_OP_FUNC(SpvOpSNegate) {
   SPVM_MATH_ONE_IMPL(i32, i32, -)
@@ -1096,7 +1096,7 @@ DEF_OP_FUNC(SpvOpSMod) {
     }
     ret->value.i32 = rem;
   }
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
@@ -1117,7 +1117,7 @@ DEF_OP_FUNC(SpvOpFMod) {
     }
     ret->value.f32 = rem;
   }
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
@@ -1126,7 +1126,7 @@ DEF_OP_FUNC(SpvOpVectorTimesScalar) {
   for (SpvmWord i = 0; i < ret->memberCnt; i++) {
     ret->VECTOR_f32(i) = operand1->VECTOR_f32(i) * operand2->value.f32;
   }
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
@@ -1139,7 +1139,7 @@ DEF_OP_FUNC(SpvOpMatrixTimesScalar) {
       ret->MATRIX_f32(i, j) = operand1->MATRIX_f32(i, j) * operand2->value.f32;
     }
   }
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
@@ -1153,7 +1153,7 @@ DEF_OP_FUNC(SpvOpVectorTimesMatrix) {
       ret->VECTOR_f32(i) += operand1->VECTOR_f32(j) * operand2->MATRIX_f32(i, j);
     }
   }
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
@@ -1167,7 +1167,7 @@ DEF_OP_FUNC(SpvOpMatrixTimesVector) {
       ret->VECTOR_f32(j) += operand1->MATRIX_f32(i, j) * operand2->VECTOR_f32(i);
     }
   }
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
@@ -1183,7 +1183,7 @@ DEF_OP_FUNC(SpvOpMatrixTimesMatrix) {
       }
     }
   }
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
@@ -1196,7 +1196,7 @@ DEF_OP_FUNC(SpvOpOuterProduct) {
       ret->MATRIX_f32(i, j) = operand1->VECTOR_f32(j) * operand2->VECTOR_f32(i);
     }
   }
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
@@ -1206,7 +1206,7 @@ DEF_OP_FUNC(SpvOpDot) {
   for (SpvmWord i = 0; i < operand1->memberCnt; i++) {
     ret->value.f32 += operand1->VECTOR_f32(i) * operand2->VECTOR_f32(i);
   }
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
@@ -1231,7 +1231,7 @@ DEF_OP_FUNC(SpvOpIAddCarry) {
     }
     ret->value.members[0]->value.u32 = u64;
   }
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
@@ -1258,7 +1258,7 @@ DEF_OP_FUNC(SpvOpISubBorrow) {
     }
     ret->value.members[0]->value.u32 = u641 - u642;
   }
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
@@ -1279,7 +1279,7 @@ DEF_OP_FUNC(SpvOpUMulExtended) {  // only support 32bit operands
     ret->value.members[0]->value.u32 = (SpvmU32) (u64 & bit32Mask);
     ret->value.members[1]->value.u32 = (SpvmU32) ((u64 & (~bit32Mask)) >> 32);
   }
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
@@ -1300,7 +1300,7 @@ DEF_OP_FUNC(SpvOpSMulExtended) {  // only support 32bit operands
     ret->value.members[0]->value.i32 = (SpvmI32) (i64 & bit32Mask);
     ret->value.members[1]->value.i32 = (SpvmI32) ((i64 & (~bit32Mask)) >> 32);
   }
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
@@ -1313,7 +1313,7 @@ DEF_OP_FUNC(SpvOpSMulExtended) {  // only support 32bit operands
   } else {                                                                              \
     ret->value.Type = operand1->value.Type OP operand2->value.u32;                      \
   }                                                                                     \
-  ctx->resultIds[resultId] = ret;                                                       \
+  ctx->results[resultId].value = ret;                                                   \
 
 DEF_OP_FUNC(SpvOpShiftRightLogical) {
   SPVM_SHIFT_IMPL(u32, >>)
@@ -1364,7 +1364,7 @@ DEF_OP_FUNC(SpvOpBitFieldInsert) {
     ret->value.u32 = bitInsert(operand->value.u32, insert->value.u32,
                                offset->value.i32, count->value.i32);
   }
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
@@ -1379,7 +1379,7 @@ DEF_OP_FUNC(SpvOpBitFieldSExtract) {
   } else {
     ret->value.i32 = bitExtractSigned(operand->value.i32, offset->value.i32, count->value.i32);
   }
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
@@ -1394,7 +1394,7 @@ DEF_OP_FUNC(SpvOpBitFieldUExtract) {
   } else {
     ret->value.u32 = bitExtractUnsigned(operand->value.u32, offset->value.i32, count->value.i32);
   }
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
@@ -1417,7 +1417,7 @@ DEF_OP_FUNC(SpvOpAny) {
       break;
     }
   }
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
@@ -1430,7 +1430,7 @@ DEF_OP_FUNC(SpvOpAll) {
       break;
     }
   }
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
@@ -1480,7 +1480,7 @@ DEF_OP_FUNC(SpvOpSelect) {
   } else {
     ret->value = operand->value.boolean ? obj1->value : obj2->value;
   }
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
@@ -1547,7 +1547,7 @@ DEF_OP_FUNC(SpvOpSLessThanEqual) {
     SpvmF32 f2 = operand2->value.f32;                                                 \
     ret->value.boolean = (!isnan(f1)) && (!isnan(f2)) && (OP);                        \
   }                                                                                   \
-  ctx->resultIds[resultId] = ret;                                                     \
+  ctx->results[resultId].value = ret;                                                 \
 
 
 #define SPVM_MATH_FUNORD_IMPL(OP)                                                     \
@@ -1563,7 +1563,7 @@ DEF_OP_FUNC(SpvOpSLessThanEqual) {
     SpvmF32 f2 = operand2->value.f32;                                                 \
     ret->value.boolean = isnan(f1) || isnan(f2) || (OP);                              \
   }                                                                                   \
-  ctx->resultIds[resultId] = ret;                                                     \
+  ctx->results[resultId].value = ret;                                                 \
 
 DEF_OP_FUNC(SpvOpFOrdEqual) {
   SPVM_MATH_FORD_IMPL(fEqual(f1, f2))
@@ -1680,10 +1680,10 @@ DEF_OP_FUNC(SpvOpPhi) {
     SpvmWord valId = READ_WORD();
     SpvmWord labelId = READ_WORD();
     if (ctx->currFrame->parentBlockId == labelId) {
-      copyValue(ret, (SpvmValue *) ctx->resultIds[valId]);
+      copyValue(ret, (SpvmValue *) ctx->results[valId].value);
     }
   }
-  ctx->resultIds[resultId] = ret;
+  ctx->results[resultId].value = ret;
   GO_NEXT
 }
 
@@ -1708,7 +1708,7 @@ DEF_OP_FUNC(SpvOpLabel) {
 
 DEF_OP_FUNC(SpvOpBranch) {
   SpvmWord labelId = READ_WORD();
-  pc = (SpvmWord *) ctx->resultIds[labelId];
+  pc = (SpvmWord *) ctx->results[labelId].value;
   GO_NEXT
 }
 
@@ -1718,8 +1718,8 @@ DEF_OP_FUNC(SpvOpBranchConditional) {
   SpvmWord falseLabelId = READ_WORD();
   SKIP_WORD_N(opcode.wordCount - 4);  // ignore branch weights
 
-  SpvmValue *conditionValue = (SpvmValue *) ctx->resultIds[conditionId];
-  pc = (SpvmWord *) ctx->resultIds[conditionValue->value.boolean ? trueLabelId : falseLabelId];
+  SpvmValue *conditionValue = (SpvmValue *) ctx->results[conditionId].value;
+  pc = (SpvmWord *) ctx->results[conditionValue->value.boolean ? trueLabelId : falseLabelId].value;
   GO_NEXT
 }
 
@@ -1735,7 +1735,7 @@ DEF_OP_FUNC(SpvOpSwitch) {
     }
   }
 
-  pc = (SpvmWord *) ctx->resultIds[retLabelId];
+  pc = (SpvmWord *) ctx->results[retLabelId].value;
   GO_NEXT
 }
 

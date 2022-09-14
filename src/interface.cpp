@@ -12,14 +12,13 @@
 
 namespace SPVM {
 
-void Interface::init(RuntimeContext *ctx, void **resultIds) {
+void Interface::init(RuntimeContext *ctx) {
   runtimeCtx_ = ctx;
-  resultIds_ = resultIds;
   SpvmModule *module = ctx->module;
 
   // init uniform location & bindings
   for (auto &pointerId : module->globalPointers) {
-    SpvmPointer *pointer = (SpvmPointer *) resultIds_[pointerId];
+    SpvmPointer *pointer = (SpvmPointer *) ctx->results[pointerId].value;
     switch (pointer->resultType->storageClass) {
       case SpvStorageClassUniformConstant:
       case SpvStorageClassInput:

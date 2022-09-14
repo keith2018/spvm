@@ -210,6 +210,12 @@ typedef struct SpvmValue_ {
   } value;
 } SpvmValue;
 
+typedef struct SpvmResult_ {
+  void *value;
+  void *dx;
+  void *dy;
+} SpvmResult;
+
 typedef struct SpvmPointer_ {
   SpvmTypePointer *resultType;
   SpvmValue *objPtr;
