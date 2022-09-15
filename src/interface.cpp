@@ -12,14 +12,13 @@
 
 namespace SPVM {
 
-void Interface::init(RuntimeContext *ctx, void **resultIds) {
+void Interface::init(RuntimeContext *ctx) {
   runtimeCtx_ = ctx;
-  resultIds_ = resultIds;
   SpvmModule *module = ctx->module;
 
   // init uniform location & bindings
   for (auto &pointerId : module->globalPointers) {
-    SpvmPointer *pointer = (SpvmPointer *) resultIds_[pointerId];
+    SpvmPointer *pointer = (SpvmPointer *) ctx->results[pointerId];
     switch (pointer->resultType->storageClass) {
       case SpvStorageClassUniformConstant:
       case SpvStorageClassInput:
@@ -212,10 +211,10 @@ void *Interface::writeValue(SpvmValue *value, void *data, SpvmWord length) {
       rtArrType->memberCnt = length / elemSize;
 
       // create SpvmValue
-#define HEAP_MALLOC(n) sp; sp += (n)
       SpvmByte *sp = runtimeCtx_->stackBase;
       value->memberCnt = rtArrType->memberCnt;
-      value->value.members = (SpvmValue **) HEAP_MALLOC(value->memberCnt * sizeof(SpvmValue *));
+      value->value.members = (SpvmValue **) sp;
+      sp += (value->memberCnt * sizeof(SpvmValue *));
       for (SpvmWord i = 0; i < value->memberCnt; i++) {
         value->value.members[i] = createValue(rtArrType->elementType, &sp);
       }

@@ -14,6 +14,8 @@
 
 namespace SPVM {
 
+class RuntimeQuadContext;
+
 typedef struct SpvmFrame {
   struct SpvmFrame *prevFrame;
   SpvmWord paramsIdx;
@@ -32,27 +34,31 @@ typedef enum {
   Result_Killed,
   Result_Error,
   Result_InitEnd,
-  Result_FunctionEnd
+  Result_ExecEnd,
 } RuntimeResult;
 
 typedef struct RuntimeContext {
-  Runtime *runtime;
+  RuntimeQuadContext *quadCtx;
+  SpvmWord quadIdx;
   SpvmModule *module;
-  void **resultIds;
+  void **results;
   SpvmByte *stackBase;
   SpvmFrame *currFrame;
-#ifndef SPVM_OP_DISPATCH_TAIL_CALL
   SpvmWord *pc;
   SpvmByte *sp;
-#endif
+  SpvmWord untilResult;
 } RuntimeContext;
 
 class Runtime {
  public:
   Runtime();
   ~Runtime();
-  bool initWithModule(SpvmModule *module, SpvmWord heapSize);
+  bool initWithModule(SpvmModule *module, SpvmWord heapSize,
+                      RuntimeQuadContext *quadCtx = nullptr, SpvmWord quadIdx = 0);
   bool execEntryPoint(SpvmWord entryIdx = 0);
+
+  bool execPrepare(SpvmWord entryIdx = 0);
+  bool execContinue(SpvmWord untilResult = SpvmResultIdInvalid);
 
   inline SpvmWord getLocationByName(const char *name) {
     return interface_.getLocationByName(name);
@@ -81,12 +87,14 @@ class Runtime {
     interface_.readOutputBuiltIn(data, builtIn);
   }
 
- private:
-  RuntimeResult invokeFunction(SpvmWord funcId);
+  inline RuntimeContext &getRuntimeContext() {
+    return ctx_;
+  }
 
  private:
   RuntimeContext ctx_;
   Interface interface_;
+  RuntimeResult execRet_;
   SpvmWord heapSize_;
   SpvmByte *heap_;  // [resultIds][types, global vars][frame0, frame0 vars][frame1, frame1 vars] ...
 };

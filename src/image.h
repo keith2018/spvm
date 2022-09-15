@@ -123,7 +123,8 @@ void destroySampledImager(SpvmSampledImage *sampledImage);
 
 bool checkImageType(SpvmImage *image, SpvmTypeImage *type);
 
-void sampleImage(SpvmValue *retValue,
+void sampleImage(void *ctx,
+                 SpvmValue *retValue,
                  SpvmValue *sampledImageValue,
                  SpvmValue *coordinateValue,
                  SpvmWord coordinateId,
@@ -131,19 +132,23 @@ void sampleImage(SpvmValue *retValue,
                  SpvmValue *depthCompValue = nullptr,
                  bool proj = false);
 
-void fetchImage(SpvmValue *retValue,
+void fetchImage(void *ctx,
+                SpvmValue *retValue,
                 SpvmValue *imageValue,
                 SpvmValue *coordinateValue,
                 SpvmWord coordinateId,
                 SpvmImageOperands *operands);
 
-void queryImageFormat(SpvmValue *retValue, SpvmValue *imageValue);
-void queryImageOrder(SpvmValue *retValue, SpvmValue *imageValue);
-void queryImageSizeLod(SpvmValue *retValue, SpvmValue *imageValue, SpvmValue *lodValue);
-void queryImageSize(SpvmValue *retValue, SpvmValue *imageValue);
-void queryImageLod(SpvmValue *retValue, SpvmValue *sampledImageValue,
-                   SpvmValue *coordinateValue, SpvmWord coordinateId);
-void queryImageLevels(SpvmValue *retValue, SpvmValue *imageValue);
-void queryImageSamples(SpvmValue *retValue, SpvmValue *imageValue);
+void queryImageFormat(void *ctx, SpvmValue *retValue, SpvmValue *imageValue);
+void queryImageOrder(void *ctx, SpvmValue *retValue, SpvmValue *imageValue);
+void queryImageSizeLod(void *ctx, SpvmValue *retValue, SpvmValue *imageValue, SpvmValue *lodValue);
+void queryImageSize(void *ctx, SpvmValue *retValue, SpvmValue *imageValue);
+void queryImageLod(void *ctx,
+                   SpvmValue *retValue,
+                   SpvmValue *sampledImageValue,
+                   SpvmValue *coordinateValue,
+                   SpvmWord coordinateId);
+void queryImageLevels(void *ctx, SpvmValue *retValue, SpvmValue *imageValue);
+void queryImageSamples(void *ctx, SpvmValue *retValue, SpvmValue *imageValue);
 
 }

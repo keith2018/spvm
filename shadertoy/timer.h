@@ -14,9 +14,9 @@ namespace ShaderToy {
 
 class Timer {
  public:
-  Timer() {}
+  Timer() = default;
 
-  ~Timer() {}
+  ~Timer() = default;
 
   void start();
 
@@ -29,7 +29,7 @@ class Timer {
 class ScopedTimer {
  public:
 
-  ScopedTimer(const char *str)
+  explicit ScopedTimer(const char *str)
       : tag_(str) {
     timer_.start();
   }
@@ -38,7 +38,7 @@ class ScopedTimer {
     printf("%s: %lld ms\n", tag_.c_str(), timer_.elapse());
   }
 
-  operator bool() {
+  explicit operator bool() {
     return true;
   }
 

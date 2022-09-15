@@ -31,7 +31,7 @@ struct SpvmUniformBindingHash {
 
 class Interface {
  public:
-  void init(RuntimeContext *ctx, void **resultIds);
+  void init(RuntimeContext *ctx);
 
   SpvmWord getLocationByName(const char *name);
   SpvmUniformBinding getBindingByName(const char *name);
@@ -51,7 +51,6 @@ class Interface {
 
  private:
   RuntimeContext *runtimeCtx_;
-  void **resultIds_;
 
   std::unordered_map<SpvmWord, SpvmValue *> inputLocation_;   // <Location, SpvmValue(ptr)>
   std::unordered_map<SpvmWord, SpvmValue *> outputLocation_;  // <Location, SpvmValue(ptr)>
