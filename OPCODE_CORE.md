@@ -208,15 +208,15 @@
 |                                     | OpFUnordLessThanEqual                     | ✅DONE   |
 |                                     | OpFOrdGreaterThanEqual                    | ✅DONE   |
 |                                     | OpFUnordGreaterThanEqual                  | ✅DONE   |
-| Derivative Instructions             | OpDPdx                                    | 🟥TODO  |
-|                                     | OpDPdy                                    | 🟥TODO  |
-|                                     | OpFwidth                                  | 🟥TODO  |
-|                                     | OpDPdxFine                                | 🟥TODO  |
-|                                     | OpDPdyFine                                | 🟥TODO  |
-|                                     | OpFwidthFine                              | 🟥TODO  |
-|                                     | OpDPdxCoarse                              | 🟥TODO  |
-|                                     | OpDPdyCoarse                              | 🟥TODO  |
-|                                     | OpFwidthCoarse                            | 🟥TODO  |
+| Derivative Instructions             | OpDPdx                                    | ✅DONE   |
+|                                     | OpDPdy                                    | ✅DONE   |
+|                                     | OpFwidth                                  | ✅DONE   |
+|                                     | OpDPdxFine                                | ✅DONE   |
+|                                     | OpDPdyFine                                | ✅DONE   |
+|                                     | OpFwidthFine                              | ✅DONE   |
+|                                     | OpDPdxCoarse                              | ✅DONE   |
+|                                     | OpDPdyCoarse                              | ✅DONE   |
+|                                     | OpFwidthCoarse                            | ✅DONE   |
 | Control-Flow Instructions           | OpPhi                                     | ✅DONE   |
 |                                     | OpLoopMerge                               | 🟥TODO  |
 |                                     | OpSelectionMerge                          | 🟥TODO  |

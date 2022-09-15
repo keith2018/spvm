@@ -46,6 +46,7 @@ typedef struct RuntimeContext {
   SpvmFrame *currFrame;
   SpvmWord *pc;
   SpvmByte *sp;
+  SpvmWord untilResult;
 } RuntimeContext;
 
 class Runtime {
@@ -55,6 +56,7 @@ class Runtime {
   bool initWithModule(SpvmModule *module, SpvmWord heapSize,
                       RuntimeQuadContext *quadCtx = nullptr, SpvmWord quadIdx = 0);
   bool execEntryPoint(SpvmWord entryIdx = 0);
+
   bool execPrepare(SpvmWord entryIdx = 0);
   bool execContinue(SpvmWord untilResult = SpvmResultIdInvalid);
 

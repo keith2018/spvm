@@ -310,16 +310,16 @@ bool Runtime::execContinue(SpvmWord untilResult) {
   RuntimeContext *ctx = &ctx_;
 
 #ifdef SPVM_OP_DISPATCH_TAIL_CALL
+  ctx->untilResult = untilResult;
   SpvmWord *pc = ctx->pc;
   SpvmByte *sp = ctx->sp;
   SpvmOpcode opcode = READ_OPCODE();
   execRet_ = __opFuncs[opcode.op](pc, sp, opcode, ctx);
-
-  // write back
-  ctx->pc = pc;
-  ctx->sp = sp;
 #else
   while (execRet_ == Result_NoError) {
+    if (untilResult != SpvmResultIdInvalid && ctx->results[untilResult]) {
+      break;
+    }
     SpvmWord *pc = ctx->pc;
     SpvmByte *sp = ctx->sp;
     SpvmOpcode opcode = READ_OPCODE();

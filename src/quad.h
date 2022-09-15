@@ -34,11 +34,11 @@ class RuntimeQuadContext {
   SpvmValue *getDPdyCoarse(SpvmWord quadIdx, SpvmWord P);
 
   inline SpvmValue *getDPdx(SpvmWord quadIdx, SpvmWord P) {
-    return getDPdxCoarse(quadIdx, P);
+    return getDPdxFine(quadIdx, P);
   }
 
   inline SpvmValue *getDPdy(SpvmWord quadIdx, SpvmWord P) {
-    return getDPdyCoarse(quadIdx, P);
+    return getDPdyFine(quadIdx, P);
   }
 
   inline SpvmWord getLocationByName(const char *name) {
@@ -91,12 +91,12 @@ class RuntimeQuadContext {
  private:
   inline SpvmValue *getResultValue(SpvmWord quadIdx, SpvmWord P);
 
-  void evalDPdxFine(SpvmWord P);
-  void evalDPdyFine(SpvmWord P);
-  void evalDPdxCoarse(SpvmWord P);
-  void evalDPdyCoarse(SpvmWord P);
+  void evalDPdxFine(SpvmWord quadIdx, SpvmWord P);
+  void evalDPdyFine(SpvmWord quadIdx, SpvmWord P);
+  void evalDPdxCoarse(SpvmWord quadIdx, SpvmWord P);
+  void evalDPdyCoarse(SpvmWord quadIdx, SpvmWord P);
 
-  bool syncQuadForResult(SpvmWord P);
+  bool syncQuadForResult(SpvmWord quadIdx, SpvmWord P);
 
  private:
   Runtime rts_[4];

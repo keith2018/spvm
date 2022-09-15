@@ -24,9 +24,19 @@ static OpFunction __opFuncs[__opFuncCnt];
 #define REG_OP_FUNC(op) __opFuncs[op] = func_##op;
 
 #ifdef SPVM_OP_DISPATCH_TAIL_CALL
-#define GO_NEXT opcode = READ_OPCODE(); return __opFuncs[opcode.op](pc, sp, opcode, ctx);
+#define GO_NEXT                                                                     \
+  if (ctx->untilResult != SpvmResultIdInvalid && ctx->results[ctx->untilResult]) {  \
+    ctx->pc = pc;                                                                   \
+    ctx->sp = sp;                                                                   \
+    return Result_NoError;                                                          \
+  }                                                                                 \
+  opcode = READ_OPCODE();                                                           \
+  return __opFuncs[opcode.op](pc, sp, opcode, ctx);
 #else
-#define GO_NEXT ctx->pc = pc; ctx->sp = sp; return Result_NoError;
+#define GO_NEXT                                                                     \
+  ctx->pc = pc;                                                                     \
+  ctx->sp = sp;                                                                     \
+  return Result_NoError;
 #endif
 
 #define READ_WORD() *pc++
