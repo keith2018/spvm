@@ -237,6 +237,7 @@ bool Runtime::initWithModule(SpvmModule *module, SpvmWord heapSize,
     return false;
   }
 
+  execRet_ = Result_NoError;
   heapSize_ = heapSize;
   heap_ = new SpvmByte[heapSize_];
   memset(heap_, 0, heapSize_ * sizeof(SpvmByte));
@@ -247,49 +248,42 @@ bool Runtime::initWithModule(SpvmModule *module, SpvmWord heapSize,
   ctx_.results = (void **) heap_;
   ctx_.currFrame = nullptr;
 
-  SpvmWord *pc = ctx_.module->code;
-  SpvmByte *sp = heap_ + module->bound * sizeof(void *);
-  RuntimeContext *ctx = &ctx_;
-  RuntimeResult result = Result_NoError;
+  ctx_.pc = ctx_.module->code;
+  ctx_.sp = heap_ + module->bound * sizeof(void *);
 
-#ifdef SPVM_OP_DISPATCH_TAIL_CALL
-  SpvmOpcode opcode = READ_OPCODE();
-  result = __opFuncs[opcode.op](pc, sp, opcode, ctx);
-#else
-  ctx->pc = pc;
-  ctx->sp = sp;
-  while(result == Result_NoError) {
-    pc = ctx->pc;
-    sp = ctx->sp;
-    SpvmOpcode opcode = READ_OPCODE();
-    result = __opFuncs[opcode.op](pc, sp, opcode, ctx);
-  }
-#endif
-
-  if (result != Result_InitEnd) {
-    LOGE("initWithModule error: %d", (SpvmI32) result);
+  bool success = execContinue();
+  if (!success) {
+    LOGE("initWithModule failed");
     return false;
   }
   module->inited = true;
-  interface_.init(ctx);
+  interface_.init(&ctx_);
   return true;
 }
 
 bool Runtime::execEntryPoint(SpvmWord entryIdx) {
-  RuntimeContext *ctx = &ctx_;
-  if (ctx->module->entryPoints.empty()) {
-    LOGE("no entry point defined");
+  bool success = execPrepare(entryIdx);
+  if (!success) {
+    LOGE("prepare exec failed");
     return false;
   }
 
-  auto &entry = ctx->module->entryPoints[entryIdx];
-  RuntimeResult result = invokeFunction(entry.id);
-  return result == Result_FunctionEnd;
+  return execContinue();
 }
 
-RuntimeResult Runtime::invokeFunction(SpvmWord funcId) {
-  auto *func = (SpvmFunction *) ctx_.results[funcId];
-  SpvmByte *sp = ctx_.stackBase;
+bool Runtime::execPrepare(SpvmWord entryIdx) {
+  if (ctx_.module->entryPoints.empty()) {
+    LOGE("execPrepare error: no entry point defined");
+    return false;
+  }
+
+  auto &entry = ctx_.module->entryPoints[entryIdx];
+  auto *func = (SpvmFunction *) ctx_.results[entry.id];
+  ctx_.sp = ctx_.stackBase;
+  ctx_.pc = func->code;
+
+  SpvmWord *pc = ctx_.pc;
+  SpvmByte *sp = ctx_.sp;
 
   // create frame
   ctx_.currFrame = (SpvmFrame *) HEAP_MALLOC(sizeof(SpvmFrame));
@@ -299,27 +293,41 @@ RuntimeResult Runtime::invokeFunction(SpvmWord funcId) {
   ctx_.currFrame->resultValue = nullptr;
   ctx_.currFrame->parentBlockId = 0;
   ctx_.currFrame->currBlockId = 0;
+  ctx_.currFrame->pc = pc;
 
-  // exec function instructions
-  SpvmWord *pc = ctx_.currFrame->pc = func->code;
+  // write back
+  ctx_.pc = pc;
+  ctx_.sp = sp;
+
+  execRet_ = Result_NoError;
+  return true;
+}
+
+bool Runtime::execContinue(SpvmWord untilResult) {
+  if (execRet_ == Result_ExecEnd) {
+    return true;
+  }
   RuntimeContext *ctx = &ctx_;
-  RuntimeResult result = Result_NoError;
 
 #ifdef SPVM_OP_DISPATCH_TAIL_CALL
+  SpvmWord *pc = ctx->pc;
+  SpvmByte *sp = ctx->sp;
   SpvmOpcode opcode = READ_OPCODE();
-  result = __opFuncs[opcode.op](pc, sp, opcode, ctx);
-#else
+  execRet_ = __opFuncs[opcode.op](pc, sp, opcode, ctx);
+
+  // write back
   ctx->pc = pc;
   ctx->sp = sp;
-  while (result == Result_NoError) {
-    pc = ctx->pc;
-    sp = ctx->sp;
+#else
+  while (execRet_ == Result_NoError) {
+    SpvmWord *pc = ctx->pc;
+    SpvmByte *sp = ctx->sp;
     SpvmOpcode opcode = READ_OPCODE();
-    result = __opFuncs[opcode.op](pc, sp, opcode, ctx);
+    execRet_ = __opFuncs[opcode.op](pc, sp, opcode, ctx);
   }
 #endif
 
-  return result;
+  return execRet_ != Result_Error;
 }
 
 }

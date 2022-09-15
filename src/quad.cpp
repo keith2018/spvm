@@ -45,8 +45,10 @@ bool RuntimeQuadContext::execEntryPoint(SpvmWord entryIdx) {
 
   bool ret = true;
   for (auto &rt : rts_) {
-    ret = ret && rt.execEntryPoint(entryIdx);
+    ret = ret && rt.execPrepare(entryIdx);
   }
+
+  ret = ret && syncQuadForResult(SpvmResultIdInvalid);
   return ret;
 }
 
@@ -87,7 +89,7 @@ SpvmValue *RuntimeQuadContext::getResultValue(SpvmWord quadIdx, SpvmWord P) {
 }
 
 void RuntimeQuadContext::evalDPdxFine(SpvmWord P) {
-  syncQuadForValue(P);
+  syncQuadForResult(P);
 
   SpvmValue *v0 = getResultValue(0, P);
   SpvmValue *v1 = getResultValue(1, P);
@@ -107,7 +109,7 @@ void RuntimeQuadContext::evalDPdxFine(SpvmWord P) {
 }
 
 void RuntimeQuadContext::evalDPdyFine(SpvmWord P) {
-  syncQuadForValue(P);
+  syncQuadForResult(P);
 
   SpvmValue *v0 = getResultValue(0, P);
   SpvmValue *v1 = getResultValue(1, P);
@@ -127,7 +129,7 @@ void RuntimeQuadContext::evalDPdyFine(SpvmWord P) {
 }
 
 void RuntimeQuadContext::evalDPdxCoarse(SpvmWord P) {
-  syncQuadForValue(P);
+  syncQuadForResult(P);
 
   SpvmValue *v0 = getResultValue(0, P);
   SpvmValue *v1 = getResultValue(1, P);
@@ -143,7 +145,7 @@ void RuntimeQuadContext::evalDPdxCoarse(SpvmWord P) {
 }
 
 void RuntimeQuadContext::evalDPdyCoarse(SpvmWord P) {
-  syncQuadForValue(P);
+  syncQuadForResult(P);
 
   SpvmValue *v0 = getResultValue(0, P);
   SpvmValue *v2 = getResultValue(2, P);
@@ -158,8 +160,12 @@ void RuntimeQuadContext::evalDPdyCoarse(SpvmWord P) {
   d->dy[3] = dy0;
 }
 
-void RuntimeQuadContext::syncQuadForValue(SpvmWord P) {
-  // TODO
+bool RuntimeQuadContext::syncQuadForResult(SpvmWord P) {
+  bool ret = true;
+  for (auto &rt : rts_) {
+    ret = ret && rt.execContinue(P);
+  }
+  return ret;
 }
 
 }

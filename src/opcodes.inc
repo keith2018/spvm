@@ -651,8 +651,8 @@ DEF_OP_FUNC(SpvOpFunctionEnd) {
 
   ctx->currFrame = ctx->currFrame->prevFrame;
   if (!ctx->currFrame) {
-    // end of all entry point function
-    return Result_FunctionEnd;
+    // end of entry point function
+    return Result_ExecEnd;
   } else {
     pc = ctx->currFrame->pc;
   }

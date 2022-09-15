@@ -96,7 +96,7 @@ class RuntimeQuadContext {
   void evalDPdxCoarse(SpvmWord P);
   void evalDPdyCoarse(SpvmWord P);
 
-  void syncQuadForValue(SpvmWord P);
+  bool syncQuadForResult(SpvmWord P);
 
  private:
   Runtime rts_[4];

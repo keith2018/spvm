@@ -45,6 +45,7 @@ typedef double    SpvmF64;
 
 #define SpvmTrue  true
 #define SpvmFalse false
+#define SpvmResultIdInvalid 0
 
 typedef struct SpvmString_ {
   SpvmWord wordCount;
