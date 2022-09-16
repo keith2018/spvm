@@ -308,9 +308,9 @@ bool Runtime::execContinue(SpvmWord untilResult) {
     return true;
   }
   RuntimeContext *ctx = &ctx_;
+  ctx->untilResult = untilResult;
 
 #ifdef SPVM_OP_DISPATCH_TAIL_CALL
-  ctx->untilResult = untilResult;
   SpvmWord *pc = ctx->pc;
   SpvmByte *sp = ctx->sp;
   SpvmOpcode opcode = READ_OPCODE();

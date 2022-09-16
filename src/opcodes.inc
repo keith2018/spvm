@@ -536,19 +536,17 @@ DEF_OP_FUNC(SpvOpVariable) {
   pointer->resultType = (SpvmTypePointer *) SPVM_TYPE(READ_WORD());
   SpvmWord resultId = READ_WORD();
   SKIP_WORD();  // storageClass
+  pointer->objPtr = CREATE_VALUE(pointer->resultType->objType);
   if (opcode.wordCount > 4) {
     SpvmWord initializerId = READ_WORD();
-    LOGE("OpVariable initializer not implement");
+    SpvmValue *initVal = (SpvmValue *)ctx->results[initializerId];
+    copyValue(pointer->objPtr, initVal);
   }
-
   // global variables
   if (!ctx->module->inited) {
     ctx->module->globalPointers.emplace_back(resultId);
   }
-
-  pointer->objPtr = CREATE_VALUE(pointer->resultType->objType);
   ctx->results[resultId] = pointer;
-
   GO_NEXT
 }
 
@@ -656,16 +654,6 @@ DEF_OP_FUNC(SpvOpFunctionParameter) {
 }
 
 DEF_OP_FUNC(SpvOpFunctionEnd) {
-  // reset heap ptr
-  sp = (SpvmByte *) ctx->currFrame;
-
-  ctx->currFrame = ctx->currFrame->prevFrame;
-  if (!ctx->currFrame) {
-    // end of entry point function
-    return Result_ExecEnd;
-  } else {
-    pc = ctx->currFrame->pc;
-  }
   GO_NEXT
 }
 
@@ -1812,7 +1800,17 @@ DEF_OP_FUNC(SpvOpKill) {
   return Result_Killed;
 }
 
+#define FUNCTION_RETURN                         \
+  sp = (SpvmByte *) ctx->currFrame;             \
+  ctx->currFrame = ctx->currFrame->prevFrame;   \
+  if (!ctx->currFrame) {                        \
+    return Result_ExecEnd;                      \
+  } else {                                      \
+    pc = ctx->currFrame->pc;                    \
+  }                                             \
+
 DEF_OP_FUNC(SpvOpReturn) {
+  FUNCTION_RETURN
   GO_NEXT
 }
 
@@ -1822,6 +1820,7 @@ DEF_OP_FUNC(SpvOpReturnValue) {
     auto &frame = ctx->currFrame;
     COPY_VALUE(frame->resultValue, retValue);
   }
+  FUNCTION_RETURN
   GO_NEXT
 }
 
