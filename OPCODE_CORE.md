@@ -30,9 +30,9 @@
 |                                     | OpTypeFloat                               | ✅DONE   |
 |                                     | OpTypeVector                              | ✅DONE   |
 |                                     | OpTypeMatrix                              | ✅DONE   |
-|                                     | OpTypeImage                               | 🟦DOING |
-|                                     | OpTypeSampler                             | 🟦DOING |
-|                                     | OpTypeSampledImage                        | 🟦DOING |
+|                                     | OpTypeImage                               | ✅DONE   |
+|                                     | OpTypeSampler                             | ✅DONE   |
+|                                     | OpTypeSampledImage                        | ✅DONE   |
 |                                     | OpTypeArray                               | ✅DONE   |
 |                                     | OpTypeRuntimeArray                        | ✅DONE   |
 |                                     | OpTypeStruct                              | ✅DONE   |
@@ -49,7 +49,7 @@
 |                                     | OpConstantFalse                           | ✅DONE   |
 |                                     | OpConstant                                | ✅DONE   |
 |                                     | OpConstantComposite                       | ✅DONE   |
-|                                     | OpConstantSampler                         | 🟦DOING |
+|                                     | OpConstantSampler                         | ✅DONE   |
 |                                     | OpConstantNull                            | ✅DONE   |
 |                                     | OpSpecConstantTrue                        | 🟥TODO  |
 |                                     | OpSpecConstantFalse                       | 🟥TODO  |
