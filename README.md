@@ -1,5 +1,5 @@
 # SPVM
-Tiny C++ [SPIR-V](https://registry.khronos.org/SPIR-V/) virtual machine (interpreter), you can use it to debug shaders: first compile your shader code(GLSL/HLSL) to SPIR-V binary file (using tools such as [glslangValidator](https://github.com/KhronosGroup/glslang)), then decode and execute entry point function `main` with SPVM, and see the output.
+Tiny C++ [SPIR-V](https://registry.khronos.org/SPIR-V/) virtual machine (interpreter), you can use it to debug shaders: first compile your shader code(GLSL/HLSL) to SPIR-V binary file (using tools such as [glslangValidator](https://github.com/KhronosGroup/glslang)), then decode and execute entry point function `main` with SPVM, and check the output.
 
 [![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 [![CMake Linux](https://github.com/keith2018/spvm/actions/workflows/cmake_linux.yml/badge.svg)](https://github.com/keith2018/spvm/actions/workflows/cmake_linux.yml)
@@ -20,7 +20,7 @@ Specifications that the project follows is:
 The project is still working in progress ...
 
 ## Spvm-ShaderToy
-Spvm-ShaderToy simulated the runtime environment of [shadertoy](https://www.shadertoy.com/), and execute shader code using SPVM (without GPU but slow 😀).
+Spvm-ShaderToy simulated the runtime environment of [shadertoy](https://www.shadertoy.com/), and execute shader code using SPVM (may very slow 😀).
 
 ### Gallery
 
