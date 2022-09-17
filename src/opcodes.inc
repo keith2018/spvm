@@ -67,17 +67,6 @@ static SpvmString readString(SpvmWord **ppc, SpvmByte **psp) {
   return ret;
 }
 
-static SpvmOpcode readOpcode(SpvmWord *pc) {
-  SpvmWord word = READ_WORD();
-
-  SpvmOpcode opcode;
-  opcode.op = SpvOp(word & SpvOpCodeMask);
-  opcode.wordCount = (word & (~SpvOpCodeMask)) >> SpvWordCountShift;
-
-//  LOGD("read opcode: %s, size: %d", spvmOpString(opcode.op), opcode.wordCount);
-  return opcode;
-}
-
 static SpvmDecorationExtra readDecorationExtra(SpvmWord **ppc, SpvDecoration decoration, SpvmWord wordCnt) {
   SpvmWord *pc = *ppc;
   SpvmDecorationExtra extra;

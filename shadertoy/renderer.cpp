@@ -119,9 +119,7 @@ bool Renderer::reloadShader(const char *shaderPath) {
   }
 
   // decode spv file
-  if (module_) {
-    delete module_;
-  }
+  delete module_;
   module_ = new SpvmModule();
   bool success = SPVM::Decoder::decodeBytes((const SpvmByte *) (spvBytes_.data()),
                                             spvBytes_.size() * sizeof(uint32_t),
@@ -133,17 +131,33 @@ bool Renderer::reloadShader(const char *shaderPath) {
 
   // init runtime
   runtimes_.clear();
-  runtimes_.resize(threadPool_.getThreadCnt());
-  for (size_t i = 0; i < runtimes_.size(); i++) {
-    RuntimeQuadContext &rt = runtimes_[i];
-    success = rt.initWithModule(module_, HEAP_SIZE);
-    if (!success) {
-      LOGE("init spvm runtime failed");
-      return false;
-    }
+  runtimeQuads_.clear();
 
-    if (iChannel0SampledImage_) {
-      rt.writeUniformBinding(iChannel0SampledImage_, 0, 1, 0);
+  if (module_->hasDerivativeOpcodes) {
+    runtimeQuads_.resize(threadPool_.getThreadCnt());
+    for (auto &rt : runtimeQuads_) {
+      success = rt.initWithModule(module_, HEAP_SIZE);
+      if (!success) {
+        LOGE("init spvm runtime failed");
+        return false;
+      }
+
+      if (iChannel0SampledImage_) {
+        rt.writeUniformBinding(iChannel0SampledImage_, 0, 1, 0);
+      }
+    }
+  } else {
+    runtimes_.resize(threadPool_.getThreadCnt());
+    for (auto &rt : runtimes_) {
+      success = rt.initWithModule(module_, HEAP_SIZE);
+      if (!success) {
+        LOGE("init spvm runtime failed");
+        return false;
+      }
+
+      if (iChannel0SampledImage_) {
+        rt.writeUniformBinding(iChannel0SampledImage_, 0, 1, 0);
+      }
     }
   }
 
@@ -151,19 +165,31 @@ bool Renderer::reloadShader(const char *shaderPath) {
   frameIdx_ = 0;
   timer_.start();
 
-  LOGI("load shader success.");
+  LOGI("load shader success, derivative instructions found: %s.", module_->hasDerivativeOpcodes ? "true" : "false");
   return true;
 }
 
 void Renderer::drawFrame() {
+  if (colorBuffer_ == nullptr || module_ == nullptr) {
+    LOGE("drawFrame error: not inited");
+    return;
+  }
+
   // update uniform
   uniformInput_.iTime = (float) timer_.elapse() / 1000.f;
   uniformInput_.iTimeDelta = uniformInput_.iTime - lastFrameTime_;
   lastFrameTime_ = uniformInput_.iTime;
   frameIdx_++;
   uniformInput_.iFrame = frameIdx_;
-  for (size_t i = 0; i < runtimes_.size(); i++) {
-    runtimes_[i].writeUniformBinding(&uniformInput_, 0, 0);
+
+  if (module_->hasDerivativeOpcodes) {
+    for (auto &rt : runtimeQuads_) {
+      rt.writeUniformBinding(&uniformInput_, 0, 0);
+    }
+  } else {
+    for (auto &rt : runtimes_) {
+      rt.writeUniformBinding(&uniformInput_, 0, 0);
+    }
   }
 
   // fragment shading
@@ -174,7 +200,11 @@ void Renderer::drawFrame() {
   for (int blockY = 0; blockY < blockCntY; blockY++) {
     for (int blockX = 0; blockX < blockCntX; blockX++) {
       threadPool_.pushTask([&, blockX, blockY](int threadId) {
-        execBlockShading(threadId, blockX, blockY, (int) blockSize);
+        if (module_->hasDerivativeOpcodes) {
+          execBlockShadingQuad(threadId, blockX, blockY, (int) blockSize);
+        } else {
+          execBlockShadingSingle(threadId, blockX, blockY, (int) blockSize);
+        }
       });
     }
   }
@@ -182,8 +212,8 @@ void Renderer::drawFrame() {
   threadPool_.waitTasksFinish();
 }
 
-void Renderer::execBlockShading(int threadId, int blockX, int blockY, int blockSize) {
-  RuntimeQuadContext &rt = runtimes_[threadId];
+void Renderer::execBlockShadingQuad(int threadId, int blockX, int blockY, int blockSize) {
+  RuntimeQuadContext &rt = runtimeQuads_[threadId];
   float fragCoord[4][2];
   float fragColor[4][4];
 
@@ -224,6 +254,29 @@ void Renderer::execBlockShading(int threadId, int blockX, int blockY, int blockS
       pixelColorCvt(rowPtr[1], x + 1, colorBuffer_->width, fragColor[1]);
       pixelColorCvt(rowPtr[2], x, colorBuffer_->width, fragColor[2]);
       pixelColorCvt(rowPtr[3], x + 1, colorBuffer_->width, fragColor[3]);
+    }
+  }
+}
+
+void Renderer::execBlockShadingSingle(int threadId, int blockX, int blockY, int blockSize) {
+  Runtime &rt = runtimes_[threadId];
+  float fragCoord[2];
+  float fragColor[4];
+
+  int blockStartX = blockX * blockSize;
+  int blockStartY = blockY * blockSize;
+
+  for (size_t y = blockStartY; y < blockStartY + blockSize && y < colorBuffer_->height; y++) {
+    uint8_t *rowPtr = PIXEL_ROW_PTR(y);
+    for (size_t x = blockStartX; x < blockStartX + blockSize && x < colorBuffer_->width; x++) {
+      fragCoord[0] = (float) x;
+      fragCoord[1] = (float) y;
+
+      rt.writeInput(fragCoord, 0);
+      rt.execEntryPoint();
+      rt.readOutput(fragColor, 0);
+
+      pixelColorCvt(rowPtr, x, colorBuffer_->width, fragColor);
     }
   }
 }

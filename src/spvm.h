@@ -255,6 +255,7 @@ typedef struct SpvmVec4_ {
   SpvmVecElement elem[4];
 } SpvmVec4;
 
+SpvmOpcode readOpcode(const SpvmWord *pc);
 SpvmValue *createValue(SpvmTypeBase *type, SpvmByte **psp);
 void copyValue(SpvmValue *dst, SpvmValue *src);
 SpvmValue *setValueF32(SpvmValue *ret, SpvmF32 val);
