@@ -7,7 +7,7 @@
 #pragma once
 
 #include <math.h>
-#include <limits>
+#include <float.h>
 #include "spvm.h"
 
 namespace SPVM {
@@ -21,7 +21,7 @@ inline SpvmU32 bitMask(int bits) {
 }
 
 inline bool fEqual(SpvmF32 a, SpvmF32 b) {
-  return std::fabs(a - b) <= std::numeric_limits<SpvmF32>::epsilon();
+  return fabs(a - b) <= FLT_EPSILON;
 }
 
 inline SpvmU32 bitInsert(SpvmU32 base, SpvmU32 insert, SpvmI32 offset, SpvmI32 count) {
