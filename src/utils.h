@@ -21,7 +21,7 @@ inline SpvmU32 bitMask(int bits) {
 }
 
 inline bool fEqual(SpvmF32 a, SpvmF32 b) {
-  return fabs(a - b) <= FLT_EPSILON;
+  return fabsf(a - b) <= FLT_EPSILON;
 }
 
 inline SpvmU32 bitInsert(SpvmU32 base, SpvmU32 insert, SpvmI32 offset, SpvmI32 count) {
@@ -99,14 +99,14 @@ inline SpvmF32 fPow(SpvmF32 x, SpvmF32 y) {
 }
 
 inline SpvmF32 fAsin(SpvmF32 x) {
-  if (abs(x) > 1) {
+  if (fabsf(x) > 1) {
     return SpvmNAN;
   }
   return asin(x);
 }
 
 inline SpvmF32 fAcos(SpvmF32 x) {
-  if (abs(x) > 1) {
+  if (fabsf(x) > 1) {
     return SpvmNAN;
   }
   return acos(x);
@@ -120,7 +120,7 @@ inline SpvmF32 fAcosh(SpvmF32 x) {
 }
 
 inline SpvmF32 fAtanh(SpvmF32 x) {
-  if (abs(x) >= 1) {
+  if (fabsf(x) >= 1) {
     return SpvmNAN;
   }
   return atanh(x);
