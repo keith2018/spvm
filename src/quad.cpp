@@ -92,42 +92,50 @@ SpvmValue *RuntimeQuadContext::getResultValue(SpvmWord quadIdx, SpvmWord P) {
 
 void RuntimeQuadContext::evalDPdxFine(SpvmWord quadIdx, SpvmWord P) {
   syncQuadForResult(quadIdx, P);
+  DerivativeRet *d = &dxdy_[P];
 
   SpvmValue *v0 = getResultValue(0, P);
   SpvmValue *v1 = getResultValue(1, P);
   SpvmValue *v2 = getResultValue(2, P);
   SpvmValue *v3 = getResultValue(3, P);
 
-  SpvmValue *dx0 = createValue(v0->type, &sp_);
-  SpvmValue *dx2 = createValue(v0->type, &sp_);
-  valueSubF32(dx0, v1, v0);
-  valueSubF32(dx2, v3, v2);
+  if (v0 && v1) {
+    SpvmValue *dx0 = createValue(v0->type, &sp_);
+    valueSubF32(dx0, v1, v0);
+    d->dx[0] = dx0;
+    d->dx[1] = dx0;
+  }
 
-  DerivativeRet *d = &dxdy_[P];
-  d->dx[0] = dx0;
-  d->dx[1] = dx0;
-  d->dx[2] = dx2;
-  d->dx[3] = dx2;
+  if (v2 && v3) {
+    SpvmValue *dx2 = createValue(v2->type, &sp_);
+    valueSubF32(dx2, v3, v2);
+    d->dx[2] = dx2;
+    d->dx[3] = dx2;
+  }
 }
 
 void RuntimeQuadContext::evalDPdyFine(SpvmWord quadIdx, SpvmWord P) {
   syncQuadForResult(quadIdx, P);
+  DerivativeRet *d = &dxdy_[P];
 
   SpvmValue *v0 = getResultValue(0, P);
   SpvmValue *v1 = getResultValue(1, P);
   SpvmValue *v2 = getResultValue(2, P);
   SpvmValue *v3 = getResultValue(3, P);
 
-  SpvmValue *dy0 = createValue(v0->type, &sp_);
-  SpvmValue *dy1 = createValue(v0->type, &sp_);
-  valueSubF32(dy0, v2, v0);
-  valueSubF32(dy1, v3, v1);
+  if (v0 && v2) {
+    SpvmValue *dy0 = createValue(v0->type, &sp_);
+    valueSubF32(dy0, v2, v0);
+    d->dy[0] = dy0;
+    d->dy[2] = dy0;
+  }
 
-  DerivativeRet *d = &dxdy_[P];
-  d->dy[0] = dy0;
-  d->dy[1] = dy1;
-  d->dy[2] = dy0;
-  d->dy[3] = dy1;
+  if (v1 && v3) {
+    SpvmValue *dy1 = createValue(v1->type, &sp_);
+    valueSubF32(dy1, v3, v1);
+    d->dy[1] = dy1;
+    d->dy[3] = dy1;
+  }
 }
 
 void RuntimeQuadContext::evalDPdxCoarse(SpvmWord quadIdx, SpvmWord P) {
@@ -136,14 +144,16 @@ void RuntimeQuadContext::evalDPdxCoarse(SpvmWord quadIdx, SpvmWord P) {
   SpvmValue *v0 = getResultValue(0, P);
   SpvmValue *v1 = getResultValue(1, P);
 
-  SpvmValue *dx0 = createValue(v0->type, &sp_);
-  valueSubF32(dx0, v1, v0);
+  if (v0 && v1) {
+    SpvmValue *dx0 = createValue(v0->type, &sp_);
+    valueSubF32(dx0, v1, v0);
 
-  DerivativeRet *d = &dxdy_[P];
-  d->dx[0] = dx0;
-  d->dx[1] = dx0;
-  d->dx[2] = dx0;
-  d->dx[3] = dx0;
+    DerivativeRet *d = &dxdy_[P];
+    d->dx[0] = dx0;
+    d->dx[1] = dx0;
+    d->dx[2] = dx0;
+    d->dx[3] = dx0;
+  }
 }
 
 void RuntimeQuadContext::evalDPdyCoarse(SpvmWord quadIdx, SpvmWord P) {
@@ -152,14 +162,16 @@ void RuntimeQuadContext::evalDPdyCoarse(SpvmWord quadIdx, SpvmWord P) {
   SpvmValue *v0 = getResultValue(0, P);
   SpvmValue *v2 = getResultValue(2, P);
 
-  SpvmValue *dy0 = createValue(v0->type, &sp_);
-  valueSubF32(dy0, v2, v0);
+  if (v0 && v2) {
+    SpvmValue *dy0 = createValue(v0->type, &sp_);
+    valueSubF32(dy0, v2, v0);
 
-  DerivativeRet *d = &dxdy_[P];
-  d->dy[0] = dy0;
-  d->dy[1] = dy0;
-  d->dy[2] = dy0;
-  d->dy[3] = dy0;
+    DerivativeRet *d = &dxdy_[P];
+    d->dy[0] = dy0;
+    d->dy[1] = dy0;
+    d->dy[2] = dy0;
+    d->dy[3] = dy0;
+  }
 }
 
 bool RuntimeQuadContext::syncQuadForResult(SpvmWord quadIdx, SpvmWord P) {

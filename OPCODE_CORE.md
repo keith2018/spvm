@@ -143,9 +143,9 @@
 |                                     | OpSDiv                                    | ✅DONE   |
 |                                     | OpFDiv                                    | ✅DONE   |
 |                                     | OpUMod                                    | ✅DONE   |
-|                                     | OpSRem                                    | ✅DONE   |
+|                                     | OpSRem                                    | 🟥TODO  |
 |                                     | OpSMod                                    | ✅DONE   |
-|                                     | OpFRem                                    | ✅DONE   |
+|                                     | OpFRem                                    | 🟥TODO  |
 |                                     | OpFMod                                    | ✅DONE   |
 |                                     | OpVectorTimesScalar                       | ✅DONE   |
 |                                     | OpMatrixTimesScalar                       | ✅DONE   |

@@ -91,6 +91,69 @@ inline int sSign(SpvmI32 x) {
   return 0;
 }
 
+inline SpvmF32 fPow(SpvmF32 x, SpvmF32 y) {
+  if (x < 0 || (x == 0 && y <= 0)) {
+    return SpvmNAN;
+  }
+  return pow(x, y);
+}
+
+inline SpvmF32 fAsin(SpvmF32 x) {
+  if (abs(x) > 1) {
+    return SpvmNAN;
+  }
+  return asin(x);
+}
+
+inline SpvmF32 fAcos(SpvmF32 x) {
+  if (abs(x) > 1) {
+    return SpvmNAN;
+  }
+  return acos(x);
+}
+
+inline SpvmF32 fAcosh(SpvmF32 x) {
+  if (x < 1) {
+    return SpvmNAN;
+  }
+  return acosh(x);
+}
+
+inline SpvmF32 fAtanh(SpvmF32 x) {
+  if (abs(x) >= 1) {
+    return SpvmNAN;
+  }
+  return atanh(x);
+}
+
+inline SpvmF32 fAtan2(SpvmF32 y, SpvmF32 x) {
+  if (x == 0 && y == 0) {
+    return SpvmNAN;
+  }
+  return atan2(y, x);
+}
+
+inline SpvmF32 fLog(SpvmF32 x) {
+  if (x <= 0) {
+    return SpvmNAN;
+  }
+  return log(x);
+}
+
+inline SpvmF32 fLog2(SpvmF32 x) {
+  if (x <= 0) {
+    return SpvmNAN;
+  }
+  return log2(x);
+}
+
+inline SpvmF32 fSqrt(SpvmF32 x) {
+  if (x < 0) {
+    return SpvmNAN;
+  }
+  return sqrt(x);
+}
+
 inline SpvmF32 radians(SpvmF32 x) {
   return x * SPVM_PI_DIV_180;
 }
@@ -99,11 +162,17 @@ inline SpvmF32 degrees(SpvmF32 x) {
   return x * SPVM_180_DIV_PI;
 }
 
-inline SpvmF32 inverseSqrt(SpvmF32 number) {
-  return 1.f / sqrt(number);
+inline SpvmF32 inverseSqrt(SpvmF32 x) {
+  if (x <= 0) {
+    return SpvmNAN;
+  }
+  return 1.f / sqrt(x);
 }
 
 inline SpvmF32 fMin(SpvmF32 a, SpvmF32 b) {
+  if (isnan(a) || isnan(b)) {
+    return SpvmNAN;
+  }
   return a > b ? b : a;
 }
 
@@ -116,6 +185,9 @@ inline SpvmU32 uMin(SpvmU32 a, SpvmU32 b) {
 }
 
 inline SpvmF32 fMax(SpvmF32 a, SpvmF32 b) {
+  if (isnan(a) || isnan(b)) {
+    return SpvmNAN;
+  }
   return a > b ? a : b;
 }
 
@@ -136,6 +208,9 @@ inline void matInverse(SpvmValue *ret, SpvmValue *mat) {
 }
 
 inline SpvmF32 fClamp(SpvmF32 d, SpvmF32 min, SpvmF32 max) {
+  if (min > max) {
+    return SpvmNAN;
+  }
   return fMin(fMax(d, min), max);
 }
 
@@ -156,6 +231,9 @@ inline SpvmF32 step(SpvmF32 edge, SpvmF32 x) {
 }
 
 inline SpvmF32 smoothStep(SpvmF32 edge0, SpvmF32 edge1, SpvmF32 x) {
+  if (edge0 >= edge1) {
+    return SpvmNAN;
+  }
   SpvmF32 t = fClamp((x - edge0) / (edge1 - edge0), 0, 1);
   return t * t * (3.0f - (2.0f * t));
 }
@@ -214,6 +292,9 @@ inline SpvmF32 nMax(SpvmF32 a, SpvmF32 b) {
 }
 
 inline SpvmF32 nClamp(SpvmF32 d, SpvmF32 min, SpvmF32 max) {
+  if (min > max) {
+    return SpvmNAN;
+  }
   return nMin(nMax(d, min), max);
 }
 

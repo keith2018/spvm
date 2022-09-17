@@ -160,6 +160,18 @@ void copyValue(SpvmValue *dst, SpvmValue *src) {
   }
 }
 
+SpvmValue *setValueF32(SpvmValue *ret, SpvmF32 val) {
+  if (ret->memberCnt > 0) {
+    for (SpvmWord i = 0; i < ret->memberCnt; i++) {
+      ret->VECTOR_f32(i) = val;
+    }
+  } else {
+    ret->value.f32 = val;
+  }
+
+  return ret;
+}
+
 void writeToValue(SpvmValue *retValue, SpvmVec4 vec) {
   if (retValue->memberCnt == 0) {
     retValue->value.i32 = vec.elem[0].i32;
@@ -200,7 +212,9 @@ SpvmVec4 getDPdx(void *ctx, SpvmWord P) {
     return ret;
   }
   SpvmValue *dx = rtCtx->quadCtx->getDPdx(rtCtx->quadIdx, P);
-  ret = readFromValue(dx);
+  if (dx) {
+    ret = readFromValue(dx);
+  }
   return ret;
 }
 
@@ -212,7 +226,9 @@ SpvmVec4 getDPdy(void *ctx, SpvmWord P) {
     return ret;
   }
   SpvmValue *dy = rtCtx->quadCtx->getDPdy(rtCtx->quadIdx, P);
-  ret = readFromValue(dy);
+  if (dy) {
+    ret = readFromValue(dy);
+  }
   return ret;
 }
 

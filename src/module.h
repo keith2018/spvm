@@ -8,6 +8,9 @@
 
 #include "spvm.h"
 
+#include <vector>
+#include <unordered_map>
+
 namespace SPVM {
 
 class SpvmModule {
