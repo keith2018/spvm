@@ -230,27 +230,38 @@ Runtime::~Runtime() {
   }
 }
 
-bool Runtime::initWithModule(SpvmModule *module, SpvmWord heapSize,
+bool Runtime::initWithModule(SpvmModule *module, SpvmWord heapSize, SpvmByte *heap,
                              RuntimeQuadContext *quadCtx, SpvmWord quadIdx) {
   if (heapSize_ != 0) {
     LOGE("initWithModule already inited");
     return false;
   }
 
-  execRet_ = Result_NoError;
+  if (heapSize <= 0) {
+    LOGE("initWithModule error heapSize: %d", heapSize);
+    return false;
+  }
+
   heapSize_ = heapSize;
-  heap_ = new SpvmByte[heapSize_];
-  memset(heap_, 0, heapSize_ * sizeof(SpvmByte));
+  SpvmByte *heapBase = heap;
+  if (heapBase == nullptr) {
+    heap_ = new SpvmByte[heapSize_];
+    memset(heap_, 0, heapSize_ * sizeof(SpvmByte));
+    heapBase = heap_;
+  } else {
+    heap_ = nullptr;
+  }
 
   ctx_.quadCtx = quadCtx;
   ctx_.quadIdx = quadIdx;
   ctx_.module = module;
-  ctx_.results = (void **) heap_;
+  ctx_.results = (void **) heapBase;
   ctx_.currFrame = nullptr;
 
   ctx_.pc = ctx_.module->code;
-  ctx_.sp = heap_ + module->bound * sizeof(void *);
+  ctx_.sp = heapBase + module->bound * sizeof(void *);
 
+  execRet_ = Result_NoError;
   bool success = execContinue();
   if (!success) {
     LOGE("initWithModule failed");

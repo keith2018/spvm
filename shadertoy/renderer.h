@@ -8,7 +8,7 @@
 
 #include <string>
 #include "module.h"
-#include "runtime.h"
+#include "quad.h"
 #include "image.h"
 #include "timer.h"
 #include "settings.h"
@@ -69,6 +69,8 @@ class Renderer {
   void destroyBuffer();
 
   static std::string readFileString(const char *path);
+  inline void execBlockShading(int threadId, int blockX, int blockY, int blockSize);
+  static inline void pixelColorCvt(uint8_t *rowPtr, size_t x, size_t width, float fragColor[4]);
 
  private:
   Settings settings_;
@@ -76,7 +78,7 @@ class Renderer {
   ThreadPool threadPool_;
 
   SpvmModule *module_ = nullptr;
-  std::vector<Runtime> runtimes_;
+  std::vector<RuntimeQuadContext> runtimes_;
 
   std::string shaderWrapperStr_;
   std::vector<uint32_t> spvBytes_;
