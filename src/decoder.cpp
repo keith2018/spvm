@@ -7,6 +7,7 @@
 #include "decoder.h"
 #include <cstdio>
 
+#include "spvm.h"
 #include "logger.h"
 
 namespace SPVM {
@@ -88,7 +89,29 @@ bool Decoder::decodeBytes(const SpvmByte *bytes, SpvmWord length, SpvmModule *mo
   module->code = ptr;
   module->codeSize = length - 5 * sizeof(SpvmWord);
 
+  module->hasDerivativeOpcodes = false;
+  module->inited = false;
+
+  // check derivative opcodes
+  while ((ptr - module->code) * sizeof(SpvmWord) < module->codeSize) {
+    SpvmOpcode insOp = readOpcode(ptr);
+    if (checkDerivativeOpcodes(insOp)) {
+      module->hasDerivativeOpcodes = true;
+      break;
+    }
+    ptr += insOp.wordCount;
+  }
+
   return true;
+}
+
+bool Decoder::checkDerivativeOpcodes(SpvmOpcode opcode) {
+  if (opcode.op == SpvOpDPdx || opcode.op == SpvOpDPdy || opcode.op == SpvOpFwidth
+      || opcode.op == SpvOpDPdxFine || opcode.op == SpvOpDPdyFine || opcode.op == SpvOpFwidthFine
+      || opcode.op == SpvOpDPdxCoarse || opcode.op == SpvOpDPdyCoarse || opcode.op == SpvOpFwidthCoarse) {
+    return true;
+  }
+  return false;
 }
 
 }

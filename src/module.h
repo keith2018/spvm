@@ -40,7 +40,9 @@ class SpvmModule {
   std::unordered_map<SpvmWord, std::vector<SpvmDecoration>> decorations;
   std::vector<SpvmWord> globalPointers;
 
-  bool inited = false;
+  // whether the module contains derivative opcodes(OpDPdx, OpDPdy, ...)
+  bool hasDerivativeOpcodes;
+  bool inited;
  public:
   SpvmModule();
   ~SpvmModule();

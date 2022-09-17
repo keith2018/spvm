@@ -19,6 +19,7 @@ class Decoder {
 
  private:
   static bool checkEndian(const SpvmWord *ptr);
+  static bool checkDerivativeOpcodes(SpvmOpcode opcode);
 };
 
 }

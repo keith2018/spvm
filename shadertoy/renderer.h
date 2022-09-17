@@ -69,7 +69,8 @@ class Renderer {
   void destroyBuffer();
 
   static std::string readFileString(const char *path);
-  inline void execBlockShading(int threadId, int blockX, int blockY, int blockSize);
+  inline void execBlockShadingQuad(int threadId, int blockX, int blockY, int blockSize);
+  inline void execBlockShadingSingle(int threadId, int blockX, int blockY, int blockSize);
   static inline void pixelColorCvt(uint8_t *rowPtr, size_t x, size_t width, float fragColor[4]);
 
  private:
@@ -78,7 +79,8 @@ class Renderer {
   ThreadPool threadPool_;
 
   SpvmModule *module_ = nullptr;
-  std::vector<RuntimeQuadContext> runtimes_;
+  std::vector<Runtime> runtimes_;
+  std::vector<RuntimeQuadContext> runtimeQuads_;
 
   std::string shaderWrapperStr_;
   std::vector<uint32_t> spvBytes_;

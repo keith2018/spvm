@@ -15,6 +15,17 @@ namespace SPVM {
 #define HEAP_MALLOC(n) sp; sp += (n)
 #endif
 
+SpvmOpcode readOpcode(const SpvmWord *pc) {
+  SpvmWord word = *pc;
+
+  SpvmOpcode opcode;
+  opcode.op = SpvOp(word & SpvOpCodeMask);
+  opcode.wordCount = (word & (~SpvOpCodeMask)) >> SpvWordCountShift;
+
+//  LOGD("read opcode: %s, size: %d", spvmOpString(opcode.op), opcode.wordCount);
+  return opcode;
+}
+
 SpvmValue *createValue(SpvmTypeBase *type, SpvmByte **psp) {
   if (type->type == SpvOpTypeVoid) {
     return nullptr;
