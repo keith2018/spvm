@@ -1,19 +1,26 @@
 # SPVM
-Tiny [SPIR-V](https://registry.khronos.org/SPIR-V/) virtual machine (interpreter), can be used for shader debugging.
+Tiny C++ [SPIR-V](https://registry.khronos.org/SPIR-V/) virtual machine (interpreter), you can use it to debug shaders: first compile your shader code(GLSL/HLSL) to SPIR-V binary file (using tools such as [glslangValidator](https://github.com/KhronosGroup/glslang)), then decode and execute entry point function `main` with SPVM, and see the output.
 
 [![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 [![CMake Linux](https://github.com/keith2018/spvm/actions/workflows/cmake_linux.yml/badge.svg)](https://github.com/keith2018/spvm/actions/workflows/cmake_linux.yml)
 [![CMake MacOS](https://github.com/keith2018/spvm/actions/workflows/cmake_macos.yml/badge.svg)](https://github.com/keith2018/spvm/actions/workflows/cmake_macos.yml)
 [![CMake Windows](https://github.com/keith2018/spvm/actions/workflows/cmake_windows.yml/badge.svg)](https://github.com/keith2018/spvm/actions/workflows/cmake_windows.yml)
 
-Opcodes support status:
-- [Core (SPIR-V 1.0) Opcodes](OPCODE_CORE.md)
-- [Ext (GLSL.std.450) Opcodes](OPCODE_EXT.md)
+Specifications that the project follows is:
+- [SPIR-V 1.0](https://registry.khronos.org/SPIR-V/specs/1.0/SPIRV.html)
+- [GLSL.std.450](https://registry.khronos.org/SPIR-V/specs/1.0/GLSL.std.450.html)
 
-The project is still in progress ...
+### Limits
+- Only part of SPIR-V 1.0 instructions has been implemented right now, see the opcodes support status:
+  - [Core (SPIR-V 1.0) Opcodes](OPCODE_CORE.md)
+  - [Ext (GLSL.std.450) Opcodes](OPCODE_EXT.md)
+- Only support 32-bits float or integer
+- Only support Addressing Model `Logical`
+
+The project is still working in progress ...
 
 ## Spvm-ShaderToy
-Spvm-ShaderToy implements [shader effects](https://www.shadertoy.com/) without GPU (but slow 😀).
+Spvm-ShaderToy simulated the runtime environment of [shadertoy](https://www.shadertoy.com/), and execute shader code using SPVM (without GPU but slow 😀).
 
 ### Gallery
 
