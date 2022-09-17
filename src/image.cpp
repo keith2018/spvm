@@ -5,7 +5,7 @@
  */
 
 #include "image.h"
-#include <memory.h>
+#include <stdlib.h>
 #include "logger.h"
 #include "utils.h"
 
