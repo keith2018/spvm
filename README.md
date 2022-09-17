@@ -14,8 +14,9 @@ Specifications that the project follows is:
 - Only part of SPIR-V 1.0 instructions has been implemented right now, see the opcodes support status:
   - [Core (SPIR-V 1.0) Opcodes](OPCODE_CORE.md)
   - [Ext (GLSL.std.450) Opcodes](OPCODE_EXT.md)
-- Only support 32-bits float or integer
-- Only support Addressing Model `Logical`
+- Only support 32-bits width [Numerical type](https://registry.khronos.org/SPIR-V/specs/1.0/SPIRV.html#_types) (float, integer)
+- Only support [Addressing Model](https://registry.khronos.org/SPIR-V/specs/1.0/SPIRV.html#Addressing_Model) `Logical`
+- Not support OpenCL related instructions
 
 The project is still working in progress ...
 
