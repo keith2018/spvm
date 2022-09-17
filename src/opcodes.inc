@@ -50,6 +50,7 @@ static OpFunction __opFuncs[__opFuncCnt];
 
 #define HEAP_MALLOC(n) sp; sp += (n)
 #define CREATE_VALUE(type) createValue((type), &sp)
+#define CREATE_VALUE_NAN(type) setValueF32(CREATE_VALUE(type), SpvmNAN)
 #define COPY_VALUE(dst, src) copyValue((dst), (src))
 #define SPVM_TYPE(typeId) ((SpvmTypeBase *) ctx->results[(typeId)])
 
@@ -539,7 +540,7 @@ DEF_OP_FUNC(SpvOpVariable) {
   pointer->objPtr = CREATE_VALUE(pointer->resultType->objType);
   if (opcode.wordCount > 4) {
     SpvmWord initializerId = READ_WORD();
-    SpvmValue *initVal = (SpvmValue *)ctx->results[initializerId];
+    SpvmValue *initVal = (SpvmValue *) ctx->results[initializerId];
     copyValue(pointer->objPtr, initVal);
   }
   // global variables
@@ -1618,19 +1619,23 @@ DEF_OP_FUNC(SpvOpFUnordGreaterThanEqual) {
   SpvmWord P = READ_WORD();                                                                   \
 
 #define DERIVATIVE_WIDTH(dx, dy)                                                              \
-  if (ret->memberCnt > 0) {                                                                   \
-    for (SpvmWord i = 0; i < ret->memberCnt; i++) {                                           \
-      ret->VECTOR_f32(i) = fabs((dx)->VECTOR_f32(i)) + fabs((dy)->VECTOR_f32(i));             \
-    }                                                                                         \
+  if ((dx) && (dy)) {                                                                         \
+      if (ret->memberCnt > 0) {                                                               \
+        for (SpvmWord i = 0; i < ret->memberCnt; i++) {                                       \
+          ret->VECTOR_f32(i) = fabs((dx)->VECTOR_f32(i)) + fabs((dy)->VECTOR_f32(i));         \
+        }                                                                                     \
+      } else {                                                                                \
+        ret->value.f32 = fabs((dx)->value.f32) + fabs((dy)->value.f32);                       \
+      }                                                                                       \
   } else {                                                                                    \
-    ret->value.f32 = fabs((dx)->value.f32) + fabs((dy)->value.f32);                           \
+    setValueF32(ret, SpvmNAN);                                                                \
   }                                                                                           \
 
 DEF_OP_FUNC(SpvOpDPdx) {
   READ_DERIVATIVE_OPERAND
   if (ctx->quadCtx) {
     SpvmValue *dx = ctx->quadCtx->getDPdx(ctx->quadIdx, P);
-    ctx->results[resultId] = dx;
+    ctx->results[resultId] = dx ? dx : CREATE_VALUE_NAN(resultType);
   } else {
     ctx->results[resultId] = CREATE_VALUE(resultType);
   }
@@ -1641,7 +1646,7 @@ DEF_OP_FUNC(SpvOpDPdy) {
   READ_DERIVATIVE_OPERAND
   if (ctx->quadCtx) {
     SpvmValue *dy = ctx->quadCtx->getDPdy(ctx->quadIdx, P);
-    ctx->results[resultId] = dy;
+    ctx->results[resultId] = dy ? dy : CREATE_VALUE_NAN(resultType);
   } else {
     ctx->results[resultId] = CREATE_VALUE(resultType);
   }
@@ -1664,7 +1669,7 @@ DEF_OP_FUNC(SpvOpDPdxFine) {
   READ_DERIVATIVE_OPERAND
   if (ctx->quadCtx) {
     SpvmValue *dx = ctx->quadCtx->getDPdxFine(ctx->quadIdx, P);
-    ctx->results[resultId] = dx;
+    ctx->results[resultId] = dx ? dx : CREATE_VALUE_NAN(resultType);
   } else {
     ctx->results[resultId] = CREATE_VALUE(resultType);
   }
@@ -1675,7 +1680,7 @@ DEF_OP_FUNC(SpvOpDPdyFine) {
   READ_DERIVATIVE_OPERAND
   if (ctx->quadCtx) {
     SpvmValue *dy = ctx->quadCtx->getDPdyFine(ctx->quadIdx, P);
-    ctx->results[resultId] = dy;
+    ctx->results[resultId] = dy ? dy : CREATE_VALUE_NAN(resultType);
   } else {
     ctx->results[resultId] = CREATE_VALUE(resultType);
   }
@@ -1698,7 +1703,7 @@ DEF_OP_FUNC(SpvOpDPdxCoarse) {
   READ_DERIVATIVE_OPERAND
   if (ctx->quadCtx) {
     SpvmValue *dx = ctx->quadCtx->getDPdxCoarse(ctx->quadIdx, P);
-    ctx->results[resultId] = dx;
+    ctx->results[resultId] = dx ? dx : CREATE_VALUE_NAN(resultType);
   } else {
     ctx->results[resultId] = CREATE_VALUE(resultType);
   }
@@ -1709,7 +1714,7 @@ DEF_OP_FUNC(SpvOpDPdyCoarse) {
   READ_DERIVATIVE_OPERAND
   if (ctx->quadCtx) {
     SpvmValue *dy = ctx->quadCtx->getDPdyCoarse(ctx->quadIdx, P);
-    ctx->results[resultId] = dy;
+    ctx->results[resultId] = dy ? dy : CREATE_VALUE_NAN(resultType);
   } else {
     ctx->results[resultId] = CREATE_VALUE(resultType);
   }

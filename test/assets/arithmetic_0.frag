@@ -72,10 +72,14 @@ void main()
     ivec3 outOpSMod = a12 % ivec3(4, 5, 6);
     ASSERT(outOpSMod == ivec3(2, 1, 1));
 
+    // OpSRem TODO
+
     // OpFMod
     vec3 a13 = vec3(10.f, -21.f, 31.f);
     vec3 outOpFMod = mod(a13, vec3(4.f, 5.f, 6.f));
     ASSERT(outOpFMod == vec3(2.f, 1.f, 1.f));
+
+    // OpFRem TODO
 
     ASSERT_END
 }

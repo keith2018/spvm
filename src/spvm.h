@@ -6,9 +6,7 @@
 
 #pragma once
 
-#include <vector>
-#include <unordered_map>
-#include <string>
+#include <cinttypes>
 
 #include "spirv.h"
 
@@ -28,24 +26,25 @@ namespace SPVM {
 #define MATRIX_f32(col, row)  value.members[(col)]->value.members[(row)]->value.f32
 #define MATRIX_value(col, row)  value.members[(col)]->value.members[(row)]->value
 
-typedef void      SpvmVoid;
-typedef uint8_t   SpvmByte;
-typedef uint32_t  SpvmWord;
-typedef bool      SpvmBool;
-typedef int8_t    SpvmI8;
-typedef uint8_t   SpvmU8;
-typedef int16_t   SpvmI16;
-typedef uint16_t  SpvmU16;
-typedef int32_t   SpvmI32;
-typedef uint32_t  SpvmU32;
-typedef int64_t   SpvmI64;
-typedef uint64_t  SpvmU64;
-typedef float     SpvmF32;
-typedef double    SpvmF64;
+typedef void SpvmVoid;
+typedef uint8_t SpvmByte;
+typedef uint32_t SpvmWord;
+typedef bool SpvmBool;
+typedef int8_t SpvmI8;
+typedef uint8_t SpvmU8;
+typedef int16_t SpvmI16;
+typedef uint16_t SpvmU16;
+typedef int32_t SpvmI32;
+typedef uint32_t SpvmU32;
+typedef int64_t SpvmI64;
+typedef uint64_t SpvmU64;
+typedef float SpvmF32;
+typedef double SpvmF64;
 
 #define SpvmTrue  true
 #define SpvmFalse false
 #define SpvmResultIdInvalid 0
+#define SpvmNAN nan("")
 
 typedef struct SpvmString_ {
   SpvmWord wordCount;
@@ -258,6 +257,7 @@ typedef struct SpvmVec4_ {
 
 SpvmValue *createValue(SpvmTypeBase *type, SpvmByte **psp);
 void copyValue(SpvmValue *dst, SpvmValue *src);
+SpvmValue *setValueF32(SpvmValue *ret, SpvmF32 val);
 SpvmWord getTypeSize(SpvmTypeBase *type);
 void writeToValue(SpvmValue *retValue, SpvmVec4 vec);
 SpvmVec4 readFromValue(SpvmValue *value);

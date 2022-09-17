@@ -126,11 +126,11 @@ DEF_GLSL_OP_FUNC(Tan) {
 }
 
 DEF_GLSL_OP_FUNC(Asin) {
-  GLSL_MATH_ONE_IMPL(f32, f32, asin)
+  GLSL_MATH_ONE_IMPL(f32, f32, fAsin)
 }
 
 DEF_GLSL_OP_FUNC(Acos) {
-  GLSL_MATH_ONE_IMPL(f32, f32, acos)
+  GLSL_MATH_ONE_IMPL(f32, f32, fAcos)
 }
 
 DEF_GLSL_OP_FUNC(Atan) {
@@ -154,19 +154,19 @@ DEF_GLSL_OP_FUNC(Asinh) {
 }
 
 DEF_GLSL_OP_FUNC(Acosh) {
-  GLSL_MATH_ONE_IMPL(f32, f32, acosh)
+  GLSL_MATH_ONE_IMPL(f32, f32, fAcosh)
 }
 
 DEF_GLSL_OP_FUNC(Atanh) {
-  GLSL_MATH_ONE_IMPL(f32, f32, atanh)
+  GLSL_MATH_ONE_IMPL(f32, f32, fAtanh)
 }
 
 DEF_GLSL_OP_FUNC(Atan2) {
-  GLSL_MATH_TWO_IMPL(f32, f32, atan2)
+  GLSL_MATH_TWO_IMPL(f32, f32, fAtan2)
 }
 
 DEF_GLSL_OP_FUNC(Pow) {
-  GLSL_MATH_TWO_IMPL(f32, f32, pow)
+  GLSL_MATH_TWO_IMPL(f32, f32, fPow)
 }
 
 DEF_GLSL_OP_FUNC(Exp) {
@@ -174,7 +174,7 @@ DEF_GLSL_OP_FUNC(Exp) {
 }
 
 DEF_GLSL_OP_FUNC(Log) {
-  GLSL_MATH_ONE_IMPL(f32, f32, log)
+  GLSL_MATH_ONE_IMPL(f32, f32, fLog)
 }
 
 DEF_GLSL_OP_FUNC(Exp2) {
@@ -182,11 +182,11 @@ DEF_GLSL_OP_FUNC(Exp2) {
 }
 
 DEF_GLSL_OP_FUNC(Log2) {
-  GLSL_MATH_ONE_IMPL(f32, f32, log2)
+  GLSL_MATH_ONE_IMPL(f32, f32, fLog2)
 }
 
 DEF_GLSL_OP_FUNC(Sqrt) {
-  GLSL_MATH_ONE_IMPL(f32, f32, sqrt)
+  GLSL_MATH_ONE_IMPL(f32, f32, fSqrt)
 }
 
 DEF_GLSL_OP_FUNC(InverseSqrt) {

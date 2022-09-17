@@ -180,9 +180,9 @@ void Renderer::drawFrame() {
         int blockStartX = blockX * (int) blockSize;
         int blockStartY = blockY * (int) blockSize;
 
-        for (size_t y = blockStartY; y <= blockStartY + (int) blockSize && y < colorBuffer_->height; y++) {
+        for (size_t y = blockStartY; y < blockStartY + (int) blockSize && y < colorBuffer_->height; y++) {
           uint8_t *rowPtr = &colorBuffer_->data[y * colorBuffer_->width * 4];
-          for (size_t x = blockStartX; x <= blockStartX + (int) blockSize && x < colorBuffer_->width; x++) {
+          for (size_t x = blockStartX; x < blockStartX + (int) blockSize && x < colorBuffer_->width; x++) {
             fragCoord[0] = (float) x;
             fragCoord[1] = (float) y;
             rt.writeInput(fragCoord, 0);
