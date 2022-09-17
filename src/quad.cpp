@@ -26,14 +26,14 @@ bool RuntimeQuadContext::initWithModule(SpvmModule *module, SpvmWord heapSize) {
 
   module_ = module;
   heapSize_ = heapSize;
-  heap_ = new SpvmByte[heapSize_];
+  heap_ = new SpvmByte[heapSize_ * 5];  // [quadCtx][rt0][rt1][rt2][rt3]
 
   dxdy_ = (DerivativeRet *) heap_;
   stackBase_ = (void **) (heap_ + module->bound * sizeof(DerivativeRet));
 
   bool ret = true;
   for (SpvmWord i = 0; i < 4; i++) {
-    ret = ret && rts_[i].initWithModule(module, heapSize, this, i);
+    ret = ret && rts_[i].initWithModule(module, heapSize, heap_ + ((i + 1) * heapSize_), this, i);
   }
   return ret;
 }

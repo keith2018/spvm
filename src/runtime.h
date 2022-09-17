@@ -53,7 +53,7 @@ class Runtime {
  public:
   Runtime();
   ~Runtime();
-  bool initWithModule(SpvmModule *module, SpvmWord heapSize,
+  bool initWithModule(SpvmModule *module, SpvmWord heapSize, SpvmByte *heap = nullptr,
                       RuntimeQuadContext *quadCtx = nullptr, SpvmWord quadIdx = 0);
   bool execEntryPoint(SpvmWord entryIdx = 0);
 

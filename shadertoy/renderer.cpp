@@ -13,8 +13,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
-#define HEAP_SIZE 512 * 1024
+#define HEAP_SIZE 256 * 1024
 #define PIXEL_CONVERT(val) 255 * fClamp(val, 0.f, 1.f)
+#define PIXEL_ROW_PTR(row) (row) >= colorBuffer_->height ? nullptr : &colorBuffer_->data[(row) * colorBuffer_->width * 4]
 
 const char *IMAGE_0_PATH = "assets/images/awesomeface.png";
 
@@ -90,7 +91,7 @@ bool Renderer::create(void *window, int width, int height) {
   }
 
   // load shader
-  settings_.loadShaderCallback_ = [&](std::string shaderPath) {
+  settings_.loadShaderCallback_ = [&](const std::string &shaderPath) {
     reloadShader(shaderPath.c_str());
   };
   shaderWrapperStr_ = readFileString(settings_.shaderWrapperPath_.c_str());
@@ -134,7 +135,7 @@ bool Renderer::reloadShader(const char *shaderPath) {
   runtimes_.clear();
   runtimes_.resize(threadPool_.getThreadCnt());
   for (size_t i = 0; i < runtimes_.size(); i++) {
-    Runtime &rt = runtimes_[i];
+    RuntimeQuadContext &rt = runtimes_[i];
     success = rt.initWithModule(module_, HEAP_SIZE);
     if (!success) {
       LOGE("init spvm runtime failed");
@@ -173,35 +174,70 @@ void Renderer::drawFrame() {
   for (int blockY = 0; blockY < blockCntY; blockY++) {
     for (int blockX = 0; blockX < blockCntX; blockX++) {
       threadPool_.pushTask([&, blockX, blockY](int threadId) {
-        Runtime &rt = runtimes_[threadId];
-        float fragCoord[2];
-        float fragColor[4];
-
-        int blockStartX = blockX * (int) blockSize;
-        int blockStartY = blockY * (int) blockSize;
-
-        for (size_t y = blockStartY; y < blockStartY + (int) blockSize && y < colorBuffer_->height; y++) {
-          uint8_t *rowPtr = &colorBuffer_->data[y * colorBuffer_->width * 4];
-          for (size_t x = blockStartX; x < blockStartX + (int) blockSize && x < colorBuffer_->width; x++) {
-            fragCoord[0] = (float) x;
-            fragCoord[1] = (float) y;
-            rt.writeInput(fragCoord, 0);
-
-            rt.execEntryPoint();
-
-            rt.readOutput(fragColor, 0);
-            uint8_t *pixel = &rowPtr[x * 4];
-            pixel[0] = PIXEL_CONVERT(fragColor[0]);
-            pixel[1] = PIXEL_CONVERT(fragColor[1]);
-            pixel[2] = PIXEL_CONVERT(fragColor[2]);
-            pixel[3] = PIXEL_CONVERT(fragColor[3]);
-          }
-        }
+        execBlockShading(threadId, blockX, blockY, (int) blockSize);
       });
     }
   }
 
   threadPool_.waitTasksFinish();
+}
+
+void Renderer::execBlockShading(int threadId, int blockX, int blockY, int blockSize) {
+  RuntimeQuadContext &rt = runtimes_[threadId];
+  float fragCoord[4][2];
+  float fragColor[4][4];
+
+  int blockStartX = blockX * blockSize;
+  int blockStartY = blockY * blockSize;
+
+  uint8_t *rowPtr[4];
+
+  for (size_t y = blockStartY; y < blockStartY + blockSize && y < colorBuffer_->height; y += 2) {
+    rowPtr[0] = PIXEL_ROW_PTR(y);
+    rowPtr[2] = PIXEL_ROW_PTR(y + 1);
+    rowPtr[1] = rowPtr[0];
+    rowPtr[3] = rowPtr[2];
+
+    for (size_t x = blockStartX; x < blockStartX + blockSize && x < colorBuffer_->width; x += 2) {
+      fragCoord[0][0] = (float) x + 0;
+      fragCoord[0][1] = (float) y + 0;
+      fragCoord[1][0] = (float) x + 1;
+      fragCoord[1][1] = (float) y + 0;
+      fragCoord[2][0] = (float) x + 0;
+      fragCoord[2][1] = (float) y + 1;
+      fragCoord[3][0] = (float) x + 1;
+      fragCoord[3][1] = (float) y + 1;
+
+      rt.writeInput(0, fragCoord[0], 0);
+      rt.writeInput(1, fragCoord[1], 0);
+      rt.writeInput(2, fragCoord[2], 0);
+      rt.writeInput(3, fragCoord[3], 0);
+
+      rt.execEntryPoint();
+
+      rt.readOutput(0, fragColor[0], 0);
+      rt.readOutput(1, fragColor[1], 0);
+      rt.readOutput(2, fragColor[2], 0);
+      rt.readOutput(3, fragColor[3], 0);
+
+      pixelColorCvt(rowPtr[0], x, colorBuffer_->width, fragColor[0]);
+      pixelColorCvt(rowPtr[1], x + 1, colorBuffer_->width, fragColor[1]);
+      pixelColorCvt(rowPtr[2], x, colorBuffer_->width, fragColor[2]);
+      pixelColorCvt(rowPtr[3], x + 1, colorBuffer_->width, fragColor[3]);
+    }
+  }
+}
+
+void Renderer::pixelColorCvt(uint8_t *rowPtr, size_t x, size_t width, float fragColor[4]) {
+  if (rowPtr == nullptr || x >= width) {
+    return;
+  }
+
+  uint8_t *pixel = &rowPtr[x * 4];
+  pixel[0] = PIXEL_CONVERT(fragColor[0]);
+  pixel[1] = PIXEL_CONVERT(fragColor[1]);
+  pixel[2] = PIXEL_CONVERT(fragColor[2]);
+  pixel[3] = PIXEL_CONVERT(fragColor[3]);
 }
 
 void Renderer::updateSize(int width, int height) {
