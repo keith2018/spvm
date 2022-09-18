@@ -101,9 +101,8 @@ std::cout << "outFragColor[3]: " << outFragColor[3] << std::endl;
 
 ## Clone
 ```bash
-git clone git@github.com:keith2018/spvm.git
+git clone --recursive https://github.com/keith2018/spvm
 cd spvm
-git submodule update --init --recursive
 ```
 
 ## Build
