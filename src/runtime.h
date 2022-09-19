@@ -10,7 +10,7 @@
 #include "module.h"
 #include "interface.h"
 
-#define SPVM_OP_DISPATCH_TAIL_CALL
+//#define SPVM_OP_DISPATCH_TAIL_CALL Fixme crash with segment fault
 
 namespace SPVM {
 
