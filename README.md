@@ -18,6 +18,12 @@ Specifications that the project follows is:
 - Only support [Addressing Model](https://registry.khronos.org/SPIR-V/specs/1.0/SPIRV.html#Addressing_Model) `Logical`
 - Not support OpenCL related instructions
 
+### TODO
+- [ ] 64-bit float/integer support
+- [ ] Performance optimizations
+  - [ ] SIMD
+  - [ ] JIT/AOT
+
 The project is still working in progress ...
 
 ## Spvm-ShaderToy
