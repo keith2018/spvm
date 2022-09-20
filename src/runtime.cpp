@@ -255,11 +255,12 @@ bool Runtime::initWithModule(SpvmModule *module, SpvmWord heapSize, SpvmByte *he
   ctx_.quadCtx = quadCtx;
   ctx_.quadIdx = quadIdx;
   ctx_.module = module;
-  ctx_.results = (void **) heapBase;
+  ctx_.resultsInit = (void **) heapBase;
+  ctx_.results = (void **) (heapBase + module->bound * sizeof(void *));
   ctx_.currFrame = nullptr;
 
   ctx_.pc = ctx_.module->code;
-  ctx_.sp = heapBase + module->bound * sizeof(void *);
+  ctx_.sp = (SpvmByte *) ctx_.results + module->bound * sizeof(void *);
 
   execRet_ = Result_NoError;
   bool success = execContinue();
@@ -267,6 +268,10 @@ bool Runtime::initWithModule(SpvmModule *module, SpvmWord heapSize, SpvmByte *he
     LOGE("initWithModule failed");
     return false;
   }
+
+  // store init results status
+  memcpy(ctx_.resultsInit, ctx_.results, module->bound * sizeof(void *));
+
   module->inited = true;
   interface_.init(&ctx_);
   return true;
@@ -287,6 +292,9 @@ bool Runtime::execPrepare(SpvmWord entryIdx) {
     LOGE("execPrepare error: no entry point defined");
     return false;
   }
+
+  // load init results status
+  memcpy(ctx_.results, ctx_.resultsInit, ctx_.module->bound * sizeof(void *));
 
   auto &entry = ctx_.module->entryPoints[entryIdx];
   auto *func = (SpvmFunction *) ctx_.results[entry.id];
@@ -314,7 +322,7 @@ bool Runtime::execPrepare(SpvmWord entryIdx) {
   return true;
 }
 
-bool Runtime::execContinue(SpvmWord untilResult) {
+bool Runtime::execContinue(SpvmWord untilResult, SpvmValue **untilValue) {
   if (execRet_ == Result_ExecEnd) {
     return true;
   }
@@ -329,6 +337,9 @@ bool Runtime::execContinue(SpvmWord untilResult) {
 #else
   while (execRet_ == Result_NoError) {
     if (untilResult != SpvmResultIdInvalid && ctx->results[untilResult]) {
+      if (untilValue) {
+        *untilValue = (SpvmValue *) ctx->results[untilResult];
+      }
       break;
     }
     SpvmWord *pc = ctx->pc;

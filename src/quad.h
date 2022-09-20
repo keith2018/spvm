@@ -11,6 +11,7 @@
 namespace SPVM {
 
 typedef struct DerivativeRet_ {
+  SpvmValue *val[4];
   SpvmValue *dx[4];
   SpvmValue *dy[4];
 } DerivativeRet;
@@ -89,14 +90,13 @@ class RuntimeQuadContext {
   }
 
  private:
-  inline SpvmValue *getResultValue(SpvmWord quadIdx, SpvmWord P);
-
   void evalDPdxFine(SpvmWord quadIdx, SpvmWord P);
   void evalDPdyFine(SpvmWord quadIdx, SpvmWord P);
   void evalDPdxCoarse(SpvmWord quadIdx, SpvmWord P);
   void evalDPdyCoarse(SpvmWord quadIdx, SpvmWord P);
 
-  bool syncQuadForResult(SpvmWord quadIdx, SpvmWord P);
+  void syncQuadForResult(SpvmWord quadIdx, SpvmWord P);
+  void storeDerivativeValue(SpvmValue **dst, void *val);
 
  private:
   Runtime rts_[4];

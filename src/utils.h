@@ -9,6 +9,7 @@
 #include <math.h>
 #include <float.h>
 #include "spvm.h"
+#include "logger.h"
 
 namespace SPVM {
 
@@ -165,10 +166,12 @@ inline SpvmU32 uMax(SpvmU32 a, SpvmU32 b) {
 
 inline void matDeterminant(SpvmValue *ret) {
   // TODO
+  LOGE("not implement: matDeterminant");
 }
 
 inline void matInverse(SpvmValue *ret, SpvmValue *mat) {
   // TODO
+  LOGE("not implement: matInverse");
 }
 
 inline SpvmF32 fClamp(SpvmF32 d, SpvmF32 min, SpvmF32 max) {

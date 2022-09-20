@@ -525,7 +525,7 @@ DEF_OP_FUNC(SpvOpVariable) {
   SpvmPointer *pointer = (SpvmPointer *) HEAP_MALLOC(sizeof(SpvmPointer));
   pointer->resultType = (SpvmTypePointer *) SPVM_TYPE(READ_WORD());
   SpvmWord resultId = READ_WORD();
-  SKIP_WORD();  // storageClass
+  pointer->resultType->storageClass = (SpvStorageClass) READ_WORD();  // storageClass
   pointer->objPtr = CREATE_VALUE(pointer->resultType->objType);
   if (opcode.wordCount > 4) {
     SpvmWord initializerId = READ_WORD();

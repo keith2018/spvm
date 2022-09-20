@@ -553,18 +553,21 @@ DEF_GLSL_OP_FUNC(FindUMsb) {
 DEF_GLSL_OP_FUNC(InterpolateAtCentroid) {
   BEGIN_EXT_FUNCTION
   // TODO
+  LOGE("not implement: InterpolateAtCentroid");
   END_EXT_FUNCTION
 }
 
 DEF_GLSL_OP_FUNC(InterpolateAtSample) {
   BEGIN_EXT_FUNCTION
   // TODO
+  LOGE("not implement: InterpolateAtSample");
   END_EXT_FUNCTION
 }
 
 DEF_GLSL_OP_FUNC(InterpolateAtOffset) {
   BEGIN_EXT_FUNCTION
   // TODO
+  LOGE("not implement: InterpolateAtOffset");
   END_EXT_FUNCTION
 }
 

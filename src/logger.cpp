@@ -57,6 +57,7 @@ void Logger::log(LogLevel level, const char *file, int line, const char *message
     case LOG_ERROR:   fprintf(stdout, "[SPVM][ERROR] : %s\n", buf_);   break;
 #endif
   }
+  fflush(stdout);
 }
 
 }
