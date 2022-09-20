@@ -41,6 +41,7 @@ typedef struct RuntimeContext {
   RuntimeQuadContext *quadCtx;
   SpvmWord quadIdx;
   SpvmModule *module;
+  void **resultsInit;
   void **results;
   SpvmByte *stackBase;
   SpvmFrame *currFrame;
@@ -58,7 +59,7 @@ class Runtime {
   bool execEntryPoint(SpvmWord entryIdx = 0);
 
   bool execPrepare(SpvmWord entryIdx = 0);
-  bool execContinue(SpvmWord untilResult = SpvmResultIdInvalid);
+  bool execContinue(SpvmWord untilResult = SpvmResultIdInvalid, SpvmValue **untilValue = nullptr);
 
   inline SpvmWord getLocationByName(const char *name) {
     return interface_.getLocationByName(name);
@@ -96,7 +97,7 @@ class Runtime {
   Interface interface_;
   RuntimeResult execRet_;
   SpvmWord heapSize_;
-  SpvmByte *heap_;  // [resultIds][types, global vars][frame0, frame0 vars][frame1, frame1 vars] ...
+  SpvmByte *heap_;  // [resultIds-init][resultIds][types, global vars][frame0, frame0 vars][frame1, frame1 vars] ...
 };
 
 }
