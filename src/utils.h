@@ -16,13 +16,15 @@ namespace SPVM {
 const static SpvmF32 SPVM_PI = 3.14159265358979323846;
 const static SpvmF32 SPVM_PI_DIV_180 = SPVM_PI / 180.0f;
 const static SpvmF32 SPVM_180_DIV_PI = 180.0f / SPVM_PI;
+const static SpvmF32 FLT_EPS = 0.000001f;
 
 inline SpvmU32 bitMask(int bits) {
   return bits >= 32 ? ~0 : (0x1 << bits) - 1;
 }
 
 inline bool fEqual(SpvmF32 a, SpvmF32 b) {
-  return fabsf(a - b) <= FLT_EPSILON;
+  bool ret = fabs(a - b) <= FLT_EPS;
+  return ret;
 }
 
 inline SpvmU32 bitInsert(SpvmU32 base, SpvmU32 insert, SpvmI32 offset, SpvmI32 count) {
@@ -86,10 +88,36 @@ inline SpvmF32 fSign(SpvmF32 x) {
   return 0;
 }
 
-inline int sSign(SpvmI32 x) {
+inline SpvmI32 sSign(SpvmI32 x) {
   if (x > 0) return 1;
   if (x < 0) return -1;
   return 0;
+}
+
+inline SpvmI32 sRem(SpvmI32 x, SpvmI32 y) {
+  if (y == 0) {
+    return 0;
+  }
+  return x % y;
+}
+
+inline SpvmI32 sMod(SpvmI32 x, SpvmI32 y) {
+  if (y == 0) {
+    return 0;
+  }
+  SpvmI32 ret = x % y;
+  if (sSign(x) != sSign(y)) {
+    ret += y;
+  }
+  return ret;
+}
+
+inline SpvmF32 fRem(SpvmF32 x, SpvmF32 y) {
+  return fmod(x, y);
+}
+
+inline SpvmF32 fMod(SpvmF32 x, SpvmF32 y) {
+  return x - y * floor(x / y);
 }
 
 inline SpvmF32 fPow(SpvmF32 x, SpvmF32 y) {
