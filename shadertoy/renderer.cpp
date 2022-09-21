@@ -13,7 +13,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
-#define HEAP_SIZE 256 * 1024
+#define HEAP_SIZE 512 * 1024
 #define PIXEL_CONVERT(val) 255 * fClamp(val, 0.f, 1.f)
 #define PIXEL_ROW_PTR(row) (row) >= colorBuffer_->height ? nullptr : &colorBuffer_->data[(row) * colorBuffer_->width * 4]
 
