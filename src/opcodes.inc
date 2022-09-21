@@ -1056,22 +1056,40 @@ DEF_OP_FUNC(SpvOpUMod) {
   GO_NEXT
 }
 
+DEF_OP_FUNC(SpvOpSRem) {
+  READ_TWO_OPERAND
+  if (ret->memberCnt > 0) {
+    for (SpvmWord i = 0; i < ret->memberCnt; i++) {
+      ret->VECTOR_i32(i) = sRem(operand1->VECTOR_i32(i), operand2->VECTOR_i32(i));
+    }
+  } else {
+    ret->value.i32 = sRem(operand1->value.i32, operand2->value.i32);
+  }
+  ctx->results[resultId] = ret;
+  GO_NEXT
+}
+
 DEF_OP_FUNC(SpvOpSMod) {
   READ_TWO_OPERAND
   if (ret->memberCnt > 0) {
     for (SpvmWord i = 0; i < ret->memberCnt; i++) {
-      SpvmI32 rem = operand1->VECTOR_i32(i) % operand2->VECTOR_i32(i);
-      if (((rem < 0) != (operand2->VECTOR_i32(i) < 0))) {
-        rem = -rem;
-      }
-      ret->VECTOR_i32(i) = rem;
+      ret->VECTOR_i32(i) = sMod(operand1->VECTOR_i32(i), operand2->VECTOR_i32(i));
     }
   } else {
-    SpvmI32 rem = operand1->value.i32 % operand2->value.i32;
-    if (((rem < 0) != (operand2->value.i32 < 0))) {
-      rem = -rem;
+    ret->value.i32 = sMod(operand1->value.i32, operand2->value.i32);
+  }
+  ctx->results[resultId] = ret;
+  GO_NEXT
+}
+
+DEF_OP_FUNC(SpvOpFRem) {
+  READ_TWO_OPERAND
+  if (ret->memberCnt > 0) {
+    for (SpvmWord i = 0; i < ret->memberCnt; i++) {
+      ret->VECTOR_f32(i) = fRem(operand1->VECTOR_f32(i), operand2->VECTOR_f32(i));
     }
-    ret->value.i32 = rem;
+  } else {
+    ret->value.f32 = fRem(operand1->value.f32, operand2->value.f32);
   }
   ctx->results[resultId] = ret;
   GO_NEXT
@@ -1081,18 +1099,10 @@ DEF_OP_FUNC(SpvOpFMod) {
   READ_TWO_OPERAND
   if (ret->memberCnt > 0) {
     for (SpvmWord i = 0; i < ret->memberCnt; i++) {
-      SpvmF32 rem = fmod(operand1->VECTOR_f32(i), operand2->VECTOR_f32(i));
-      if (((rem < 0) != (operand2->VECTOR_f32(i) < 0))) {
-        rem = -rem;
-      }
-      ret->VECTOR_f32(i) = rem;
+      ret->VECTOR_f32(i) = fMod(operand1->VECTOR_f32(i), operand2->VECTOR_f32(i));
     }
   } else {
-    SpvmF32 rem = fmod(operand1->value.f32, operand2->value.f32);
-    if (((rem < 0) != (operand2->value.f32 < 0))) {
-      rem = -rem;
-    }
-    ret->value.f32 = rem;
+    ret->value.f32 = fMod(operand1->value.f32, operand2->value.f32);
   }
   ctx->results[resultId] = ret;
   GO_NEXT
