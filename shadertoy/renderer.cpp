@@ -18,6 +18,7 @@
 #define PIXEL_ROW_PTR(row) (row) >= colorBuffer_->height ? nullptr : &colorBuffer_->data[(row) * colorBuffer_->width * 4]
 
 const char *IMAGE_0_PATH = "assets/images/awesomeface.png";
+#define SOUND_SAMPLE_RATE 44100
 
 namespace SPVM {
 namespace ShaderToy {
@@ -37,6 +38,8 @@ bool Renderer::create(void *window, int width, int height) {
   uniformInput_.iResolution.x = (float) colorBuffer_->width;
   uniformInput_.iResolution.y = (float) colorBuffer_->height;
   uniformInput_.iResolution.z = 0;
+  uniformInput_.iSampleRate = SOUND_SAMPLE_RATE;
+  updateUniformDate(uniformInput_.iDate);
 
   int iw = 0, ih = 0, n = 0;
   stbi_set_flip_vertically_on_load(true);
@@ -351,6 +354,17 @@ std::string Renderer::readFileString(const char *path) {
   delete[] buffer;
 
   return retStr;
+}
+
+void Renderer::updateUniformDate(vec4 &date) {
+  std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+  time_t tt = std::chrono::system_clock::to_time_t(now);
+  tm localTime = *localtime(&tt);
+
+  date.x = (float) (localTime.tm_year + 1900);
+  date.y = (float) (localTime.tm_mon + 1);
+  date.z = (float) (localTime.tm_mday);
+  date.w = (float) (localTime.tm_hour * 3600 + localTime.tm_min * 60 + localTime.tm_sec);
 }
 
 }

@@ -73,6 +73,8 @@ class Renderer {
   inline void execBlockShadingSingle(int threadId, int blockX, int blockY, int blockSize);
   static inline void pixelColorCvt(uint8_t *rowPtr, size_t x, size_t width, float fragColor[4]);
 
+  static void updateUniformDate(vec4 &date);
+
  private:
   Settings settings_;
   int rasterBlockSize_ = 32;
