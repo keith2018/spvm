@@ -192,14 +192,109 @@ inline SpvmU32 uMax(SpvmU32 a, SpvmU32 b) {
   return a > b ? a : b;
 }
 
-inline void matDeterminant(SpvmValue *ret) {
-  // TODO
-  LOGE("not implement: matDeterminant");
+inline SpvmF32 matDeterminant(SpvmValue * x) {
+#define M_x(col, row) x->MATRIX_f32(col, row)
+  switch (x->memberCnt) {
+    case 2: {
+      return M_x(0, 0) * M_x(1, 1) - M_x(1, 0) * M_x(0, 1);
+    }
+    case 3: {
+      return M_x(0, 0) * (M_x(1, 1) * M_x(2, 2) - M_x(2, 1) * M_x(1, 2))
+          - M_x(1, 0) * (M_x(0, 1) * M_x(2, 2) - M_x(2, 1) * M_x(0, 2))
+          + M_x(2, 0) * (M_x(0, 1) * M_x(1, 2) - M_x(1, 1) * M_x(0, 2));
+    }
+    case 4: {
+      SpvmF32 m2233 = M_x(2, 2) * M_x(3, 3) - M_x(3, 2) * M_x(2, 3);
+      SpvmF32 m2133 = M_x(2, 1) * M_x(3, 3) - M_x(3, 1) * M_x(2, 3);
+      SpvmF32 m2132 = M_x(2, 1) * M_x(3, 2) - M_x(3, 1) * M_x(2, 2);
+      SpvmF32 m2033 = M_x(2, 0) * M_x(3, 3) - M_x(3, 0) * M_x(2, 3);
+      SpvmF32 m2032 = M_x(2, 0) * M_x(3, 2) - M_x(3, 0) * M_x(2, 2);
+      SpvmF32 m2031 = M_x(2, 0) * M_x(3, 1) - M_x(3, 0) * M_x(2, 1);
+
+      return M_x(0, 0) * (M_x(1, 1) * m2233 - M_x(1, 2) * m2133 + M_x(1, 3) * m2132)
+          - M_x(0, 1) * (M_x(1, 0) * m2233 - M_x(1, 2) * m2033 + M_x(1, 3) * m2032)
+          + M_x(0, 2) * (M_x(1, 0) * m2133 - M_x(1, 1) * m2033 + M_x(1, 3) * m2031)
+          - M_x(0, 3) * (M_x(1, 0) * m2132 - M_x(1, 1) * m2032 + M_x(1, 2) * m2031);
+    }
+    default:
+      break;
+  }
+  return 0.f;
 }
 
-inline void matInverse(SpvmValue *ret, SpvmValue *mat) {
-  // TODO
-  LOGE("not implement: matInverse");
+inline void matInverse(SpvmValue * ret, SpvmValue * x) {
+#define M_ret(col, row) ret->MATRIX_f32(col, row)
+#define M_x(col, row) x->MATRIX_f32(col, row)
+  SpvmF32 invDet = matDeterminant(x);
+  switch (x->memberCnt) {
+    case 2: {
+      M_ret(0, 0) = +M_x(1, 1) * invDet;
+      M_ret(0, 1) = -M_x(0, 1) * invDet;
+      M_ret(1, 0) = -M_x(1, 0) * invDet;
+      M_ret(1, 1) = +M_x(0, 0) * invDet;
+      break;
+    }
+    case 3: {
+      M_ret(0, 0) = +(M_x(1, 1) * M_x(2, 2) - M_x(2, 1) * M_x(1, 2)) * invDet;
+      M_ret(0, 1) = -(M_x(0, 1) * M_x(2, 2) - M_x(2, 1) * M_x(0, 2)) * invDet;
+      M_ret(0, 2) = +(M_x(0, 1) * M_x(1, 2) - M_x(1, 1) * M_x(0, 2)) * invDet;
+      M_ret(1, 0) = -(M_x(1, 0) * M_x(2, 2) - M_x(2, 0) * M_x(1, 2)) * invDet;
+      M_ret(1, 1) = +(M_x(0, 0) * M_x(2, 2) - M_x(2, 0) * M_x(0, 2)) * invDet;
+      M_ret(1, 2) = -(M_x(0, 0) * M_x(1, 2) - M_x(1, 0) * M_x(0, 2)) * invDet;
+      M_ret(2, 0) = +(M_x(1, 0) * M_x(2, 1) - M_x(2, 0) * M_x(1, 1)) * invDet;
+      M_ret(2, 1) = -(M_x(0, 0) * M_x(2, 1) - M_x(2, 0) * M_x(0, 1)) * invDet;
+      M_ret(2, 2) = +(M_x(0, 0) * M_x(1, 1) - M_x(1, 0) * M_x(0, 1)) * invDet;
+      break;
+    }
+    case 4: {
+      SpvmF32 c00 = M_x(2, 2) * M_x(3, 3) - M_x(3, 2) * M_x(2, 3);
+      SpvmF32 c02 = M_x(1, 2) * M_x(3, 3) - M_x(3, 2) * M_x(1, 3);
+      SpvmF32 c03 = M_x(1, 2) * M_x(2, 3) - M_x(2, 2) * M_x(1, 3);
+
+      SpvmF32 c04 = M_x(2, 1) * M_x(3, 3) - M_x(3, 1) * M_x(2, 3);
+      SpvmF32 c06 = M_x(1, 1) * M_x(3, 3) - M_x(3, 1) * M_x(1, 3);
+      SpvmF32 c07 = M_x(1, 1) * M_x(2, 3) - M_x(2, 1) * M_x(1, 3);
+
+      SpvmF32 c08 = M_x(2, 1) * M_x(3, 2) - M_x(3, 1) * M_x(2, 2);
+      SpvmF32 c10 = M_x(1, 1) * M_x(3, 2) - M_x(3, 1) * M_x(1, 2);
+      SpvmF32 c11 = M_x(1, 1) * M_x(2, 2) - M_x(2, 1) * M_x(1, 2);
+
+      SpvmF32 c12 = M_x(2, 0) * M_x(3, 3) - M_x(3, 0) * M_x(2, 3);
+      SpvmF32 c14 = M_x(1, 0) * M_x(3, 3) - M_x(3, 0) * M_x(1, 3);
+      SpvmF32 c15 = M_x(1, 0) * M_x(2, 3) - M_x(2, 0) * M_x(1, 3);
+
+      SpvmF32 c16 = M_x(2, 0) * M_x(3, 2) - M_x(3, 0) * M_x(2, 2);
+      SpvmF32 c18 = M_x(1, 0) * M_x(3, 2) - M_x(3, 0) * M_x(1, 2);
+      SpvmF32 c19 = M_x(1, 0) * M_x(2, 2) - M_x(2, 0) * M_x(1, 2);
+
+      SpvmF32 c20 = M_x(2, 0) * M_x(3, 1) - M_x(3, 0) * M_x(2, 1);
+      SpvmF32 c22 = M_x(1, 0) * M_x(3, 1) - M_x(3, 0) * M_x(1, 1);
+      SpvmF32 c23 = M_x(1, 0) * M_x(2, 1) - M_x(2, 0) * M_x(1, 1);
+
+      M_ret(0, 0) = +(M_x(1, 1) * c00 - M_x(1, 2) * c04 + M_x(1, 3) * c08) * invDet;
+      M_ret(0, 1) = -(M_x(0, 1) * c00 - M_x(0, 2) * c04 + M_x(0, 3) * c08) * invDet;
+      M_ret(0, 2) = +(M_x(0, 1) * c02 - M_x(0, 2) * c06 + M_x(0, 3) * c10) * invDet;
+      M_ret(0, 3) = -(M_x(0, 1) * c03 - M_x(0, 2) * c07 + M_x(0, 3) * c11) * invDet;
+
+      M_ret(1, 0) = -(M_x(1, 0) * c00 - M_x(1, 2) * c12 + M_x(1, 3) * c16) * invDet;
+      M_ret(1, 1) = +(M_x(0, 0) * c00 - M_x(0, 2) * c12 + M_x(0, 3) * c16) * invDet;
+      M_ret(1, 2) = -(M_x(0, 0) * c02 - M_x(0, 2) * c14 + M_x(0, 3) * c18) * invDet;
+      M_ret(1, 3) = +(M_x(0, 0) * c03 - M_x(0, 2) * c15 + M_x(0, 3) * c19) * invDet;
+
+      M_ret(2, 0) = +(M_x(1, 0) * c04 - M_x(1, 1) * c12 + M_x(1, 3) * c20) * invDet;
+      M_ret(2, 1) = -(M_x(0, 0) * c04 - M_x(0, 1) * c12 + M_x(0, 3) * c20) * invDet;
+      M_ret(2, 2) = +(M_x(0, 0) * c06 - M_x(0, 1) * c14 + M_x(0, 3) * c22) * invDet;
+      M_ret(2, 3) = -(M_x(0, 0) * c07 - M_x(0, 1) * c15 + M_x(0, 3) * c23) * invDet;
+
+      M_ret(3, 0) = -(M_x(1, 0) * c08 - M_x(1, 1) * c16 + M_x(1, 2) * c20) * invDet;
+      M_ret(3, 1) = +(M_x(0, 0) * c08 - M_x(0, 1) * c16 + M_x(0, 2) * c20) * invDet;
+      M_ret(3, 2) = -(M_x(0, 0) * c10 - M_x(0, 1) * c18 + M_x(0, 2) * c22) * invDet;
+      M_ret(3, 3) = +(M_x(0, 0) * c11 - M_x(0, 1) * c19 + M_x(0, 2) * c23) * invDet;
+      break;
+    }
+    default:
+      break;
+  }
 }
 
 inline SpvmF32 fClamp(SpvmF32 d, SpvmF32 min, SpvmF32 max) {
