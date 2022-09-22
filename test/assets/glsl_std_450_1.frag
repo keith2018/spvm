@@ -9,8 +9,14 @@ void main()
 {
     ASSERT_BEGIN(64)
 
-    // Determinant TODO
-    // MatrixInverse TODO
+    // Determinant
+    mat2 m1 = mat2(1.f, 0.f, 1.f, 1.f);
+    float det = determinant(m1);
+    ASSERT(det == 1.f)
+
+    // MatrixInverse
+    mat2 m2 = inverse(m1);
+    ASSERT(m2 == mat2(1.f, 0.f, -1.f, 1.f));
 
     float f1 = 1.5f;
     float f2 = 0.f;

@@ -196,7 +196,7 @@ DEF_GLSL_OP_FUNC(InverseSqrt) {
 DEF_GLSL_OP_FUNC(Determinant) {
   BEGIN_EXT_FUNCTION
   SpvmValue *x = READ_OPERAND();
-  matDeterminant(ret);
+  ret->value.f32 = matDeterminant(x);
   END_EXT_FUNCTION
 }
 
