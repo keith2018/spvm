@@ -75,7 +75,7 @@ typedef struct SpvmExtension_ {
 typedef struct SpvmExtInstImport_ {
   SpvmWord setId;
   SpvmWord insCnt;
-  void *insPtr[0];
+  void *insLabels[0];
 } SpvmExtInstImport;
 
 typedef struct SpvmEntryPoint_ {
