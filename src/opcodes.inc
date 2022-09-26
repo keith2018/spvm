@@ -13,17 +13,11 @@
 #include "opstrings.h"
 #include "image.h"
 
+#include "ext/GLSL.std.450.h"
+
 namespace SPVM {
 
-typedef RuntimeResult (*OpFunction)(SpvmWord *, SpvmByte *, SpvmOpcode, RuntimeContext *);
-
-static constexpr SpvmWord __opFuncCnt = 512;
-static OpFunction __opFuncs[__opFuncCnt];
-
-#define DEF_OP_FUNC(op) static RuntimeResult func_##op(SpvmWord *pc, SpvmByte *sp, SpvmOpcode opcode, RuntimeContext *ctx)
-#define REG_OP_FUNC(op) __opFuncs[op] = func_##op;
-
-#ifdef SPVM_OP_DISPATCH_TAIL_CALL
+#define DEF_OP_FUNC(op) case op :
 #define GO_NEXT                                                                     \
   if (ctx->untilResult != SpvmResultIdInvalid && ctx->results[ctx->untilResult]) {  \
     ctx->pc = pc;                                                                   \
@@ -31,13 +25,7 @@ static OpFunction __opFuncs[__opFuncCnt];
     return Result_NoError;                                                          \
   }                                                                                 \
   opcode = READ_OPCODE();                                                           \
-  return __opFuncs[opcode.op](pc, sp, opcode, ctx);
-#else
-#define GO_NEXT                                                                     \
-  ctx->pc = pc;                                                                     \
-  ctx->sp = sp;                                                                     \
-  return Result_NoError;
-#endif
+  break;
 
 #define READ_WORD() *pc++
 #define SKIP_WORD() pc++
@@ -131,7 +119,20 @@ static SpvmImageOperands readImageOperands(SpvmWord **ppc, RuntimeContext *ctx, 
   return operands;
 }
 
-#include "ext/GLSL.std.450.inc"
+RuntimeResult execOpCodes(SpvmWord *pc, SpvmByte *sp, SpvmOpcode opcode, RuntimeContext *ctx) {
+  if (ctx->untilResult != SpvmResultIdInvalid && ctx->results[ctx->untilResult]) {
+    ctx->pc = pc;
+    ctx->sp = sp;
+    return Result_NoError;
+  }
+
+  while(true) { switch(opcode.op) {
+
+default: {
+  LOGD("Instruction not support, skip. opcode: %s, size: %d", spvmOpString(opcode.op), opcode.wordCount);
+  SKIP_CURRENT_OPCODE();
+  GO_NEXT
+}
 
 DEF_OP_FUNC(SpvOpNop) {
   GO_NEXT
@@ -231,26 +232,25 @@ DEF_OP_FUNC(SpvOpExtInstImport) {
   SpvmWord resultId = READ_WORD();
   SpvmString extName = READ_STR();
   if (strcmp(EXT_GLSLstd450, (const char *) extName.str) == 0) {
-    SpvmWord extStructSize = sizeof(SpvmExtInstImport) + GLSLstd450Count * sizeof(void *);
-    SpvmExtInstImport *ext = (SpvmExtInstImport *) HEAP_MALLOC(extStructSize);
+    SpvmExtInstImport *ext = (SpvmExtInstImport *) HEAP_MALLOC(sizeof(SpvmExtInstImport));
     ext->setId = resultId;
-    ext->insCnt = GLSLstd450Count;
-    registerGLSLstd450(&ext->insPtr[0], ext->insCnt);
     ctx->results[resultId] = ext;
   } else {
     LOGE("ExtInstImport not support: %s", extName.str);
     return Result_Error;
   }
-
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpExtInst) {
-  SKIP_WORD_N(2);
-  SpvmExtInstImport *ext = (SpvmExtInstImport *) ctx->results[READ_WORD()];
-  OpFunction extFunc = (OpFunction) ext->insPtr[READ_WORD()];
+  SKIP_WORD_N(2);   // result type, result id
+  SKIP_WORD();      // SpvmExtInstImport *ext = (SpvmExtInstImport *) ctx->results[READ_WORD()];
+  SpvmWord ins = READ_WORD();
   REWIND_WORD_N(4);
-  return extFunc(pc, sp, opcode, ctx);
+  switch(ins) {     // Instruction
+#include "ext/GLSL.std.450.inc"
+  }
+  GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpMemoryModel) {
@@ -1833,4 +1833,7 @@ DEF_OP_FUNC(SpvOpUnreachable) {
   return Result_Unreachable;
 }
 
+}}
+
+}
 }

@@ -4,16 +4,8 @@
  *
  */
 
-#include "GLSL.std.450.h"
-
-#define REG_GLSL_OP_FUNC(op) ins[GLSLstd450##op] = (void*)func_GLSLstd450##op;
-#define DEF_GLSL_OP_FUNC(op) DEF_OP_FUNC(GLSLstd450##op)
-
-static RuntimeResult func_GLSLstd450_NotSupport(SpvmWord *pc, SpvmByte *sp, SpvmOpcode opcode, RuntimeContext *ctx) {
-  LOGD("GLSL.std.450 Instruction not support, skip. opcode: %s, size: %d", spvmOpString(opcode.op), opcode.wordCount);
-  SKIP_CURRENT_OPCODE();
-  GO_NEXT
-}
+#define DEF_GLSL_OP_FUNC(op) case GLSLstd450##op :
+#define GLSL_GO_NEXT break;
 
 #define BEGIN_EXT_FUNCTION                                                            \
   SpvmTypeBase *resultType = SPVM_TYPE(READ_WORD());                                  \
@@ -23,7 +15,7 @@ static RuntimeResult func_GLSLstd450_NotSupport(SpvmWord *pc, SpvmByte *sp, Spvm
 
 #define END_EXT_FUNCTION                                                              \
   ctx->results[resultId] = ret;                                                       \
-  GO_NEXT                                                                             \
+  GLSL_GO_NEXT                                                                        \
 
 #define GLSL_MATH_ONE_IMPL(RetType, OpType, OP)                                       \
   BEGIN_EXT_FUNCTION                                                                  \
@@ -64,6 +56,13 @@ static RuntimeResult func_GLSLstd450_NotSupport(SpvmWord *pc, SpvmByte *sp, Spvm
     ret->value.RetType = OP(x->value.OpType, y->value.OpType, z->value.OpType);       \
   }                                                                                   \
   END_EXT_FUNCTION                                                                    \
+
+
+default: {
+  LOGD("GLSL.std.450 Instruction not support, skip. opcode: %s, size: %d", spvmOpString(opcode.op), opcode.wordCount);
+  SKIP_CURRENT_OPCODE();
+  GLSL_GO_NEXT
+}
 
 DEF_GLSL_OP_FUNC(Round) {
   GLSL_MATH_ONE_IMPL(f32, f32, round)
@@ -581,103 +580,4 @@ DEF_GLSL_OP_FUNC(NMax) {
 
 DEF_GLSL_OP_FUNC(NClamp) {
   GLSL_MATH_THREE_IMPL(f32, f32, nClamp)
-}
-
-void registerGLSLstd450(void **ins, SpvmWord cnt) {
-  for (SpvmWord i = 0; i < cnt; i++) {
-    ins[i] = (void *) func_GLSLstd450_NotSupport;
-  }
-
-  REG_GLSL_OP_FUNC(Round)
-  REG_GLSL_OP_FUNC(RoundEven)
-  REG_GLSL_OP_FUNC(Trunc)
-  REG_GLSL_OP_FUNC(FAbs)
-  REG_GLSL_OP_FUNC(SAbs)
-  REG_GLSL_OP_FUNC(FSign)
-  REG_GLSL_OP_FUNC(SSign)
-  REG_GLSL_OP_FUNC(Floor)
-  REG_GLSL_OP_FUNC(Ceil)
-  REG_GLSL_OP_FUNC(Fract)
-
-  REG_GLSL_OP_FUNC(Radians)
-  REG_GLSL_OP_FUNC(Degrees)
-  REG_GLSL_OP_FUNC(Sin)
-  REG_GLSL_OP_FUNC(Cos)
-  REG_GLSL_OP_FUNC(Tan)
-  REG_GLSL_OP_FUNC(Asin)
-  REG_GLSL_OP_FUNC(Acos)
-  REG_GLSL_OP_FUNC(Atan)
-  REG_GLSL_OP_FUNC(Sinh)
-  REG_GLSL_OP_FUNC(Cosh)
-  REG_GLSL_OP_FUNC(Tanh)
-  REG_GLSL_OP_FUNC(Asinh)
-  REG_GLSL_OP_FUNC(Acosh)
-  REG_GLSL_OP_FUNC(Atanh)
-  REG_GLSL_OP_FUNC(Atan2)
-
-  REG_GLSL_OP_FUNC(Pow)
-  REG_GLSL_OP_FUNC(Exp)
-  REG_GLSL_OP_FUNC(Log)
-  REG_GLSL_OP_FUNC(Exp2)
-  REG_GLSL_OP_FUNC(Log2)
-  REG_GLSL_OP_FUNC(Sqrt)
-  REG_GLSL_OP_FUNC(InverseSqrt)
-
-  REG_GLSL_OP_FUNC(Determinant)
-  REG_GLSL_OP_FUNC(MatrixInverse)
-
-  REG_GLSL_OP_FUNC(Modf)
-  REG_GLSL_OP_FUNC(ModfStruct)
-  REG_GLSL_OP_FUNC(FMin)
-  REG_GLSL_OP_FUNC(UMin)
-  REG_GLSL_OP_FUNC(SMin)
-  REG_GLSL_OP_FUNC(FMax)
-  REG_GLSL_OP_FUNC(UMax)
-  REG_GLSL_OP_FUNC(SMax)
-  REG_GLSL_OP_FUNC(FClamp)
-  REG_GLSL_OP_FUNC(UClamp)
-  REG_GLSL_OP_FUNC(SClamp)
-  REG_GLSL_OP_FUNC(FMix)
-//  REG_GLSL_OP_FUNC(IMix)
-  REG_GLSL_OP_FUNC(Step)
-  REG_GLSL_OP_FUNC(SmoothStep)
-
-  REG_GLSL_OP_FUNC(Fma)
-  REG_GLSL_OP_FUNC(Frexp)
-  REG_GLSL_OP_FUNC(FrexpStruct)
-  REG_GLSL_OP_FUNC(Ldexp)
-
-  REG_GLSL_OP_FUNC(PackSnorm4x8)
-
-  REG_GLSL_OP_FUNC(PackUnorm4x8)
-  REG_GLSL_OP_FUNC(PackSnorm2x16)
-  REG_GLSL_OP_FUNC(PackUnorm2x16)
-//  REG_GLSL_OP_FUNC(PackHalf2x16)
-//  REG_GLSL_OP_FUNC(PackDouble2x32)
-  REG_GLSL_OP_FUNC(UnpackSnorm2x16)
-  REG_GLSL_OP_FUNC(UnpackUnorm2x16)
-//  REG_GLSL_OP_FUNC(UnpackHalf2x16)
-  REG_GLSL_OP_FUNC(UnpackSnorm4x8)
-  REG_GLSL_OP_FUNC(UnpackUnorm4x8)
-//  REG_GLSL_OP_FUNC(UnpackDouble2x32)
-
-  REG_GLSL_OP_FUNC(Length)
-  REG_GLSL_OP_FUNC(Distance)
-  REG_GLSL_OP_FUNC(Cross)
-  REG_GLSL_OP_FUNC(Normalize)
-  REG_GLSL_OP_FUNC(FaceForward)
-  REG_GLSL_OP_FUNC(Reflect)
-  REG_GLSL_OP_FUNC(Refract)
-
-  REG_GLSL_OP_FUNC(FindILsb)
-  REG_GLSL_OP_FUNC(FindSMsb)
-  REG_GLSL_OP_FUNC(FindUMsb)
-
-  REG_GLSL_OP_FUNC(InterpolateAtCentroid)
-  REG_GLSL_OP_FUNC(InterpolateAtSample)
-  REG_GLSL_OP_FUNC(InterpolateAtOffset)
-
-  REG_GLSL_OP_FUNC(NMin)
-  REG_GLSL_OP_FUNC(NMax)
-  REG_GLSL_OP_FUNC(NClamp)
 }
