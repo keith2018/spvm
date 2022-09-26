@@ -4,7 +4,8 @@
  *
  */
 
-#define DEF_GLSL_OP_FUNC(op) DEF_OP_FUNC(GLSLstd450##op)
+#define DEF_GLSL_OP_FUNC(op) case GLSLstd450##op :
+#define GLSL_GO_NEXT break;
 
 #define BEGIN_EXT_FUNCTION                                                            \
   SpvmTypeBase *resultType = SPVM_TYPE(READ_WORD());                                  \
@@ -14,7 +15,7 @@
 
 #define END_EXT_FUNCTION                                                              \
   ctx->results[resultId] = ret;                                                       \
-  GO_NEXT                                                                             \
+  GLSL_GO_NEXT                                                                        \
 
 #define GLSL_MATH_ONE_IMPL(RetType, OpType, OP)                                       \
   BEGIN_EXT_FUNCTION                                                                  \
@@ -57,10 +58,10 @@
   END_EXT_FUNCTION                                                                    \
 
 
-DEF_GLSL_OP_FUNC(NotSupport) {
-    LOGD("GLSL.std.450 Instruction not support, skip. opcode: %s, size: %d", spvmOpString(opcode.op), opcode.wordCount);
-    SKIP_CURRENT_OPCODE();
-    GO_NEXT
+default: {
+  LOGD("GLSL.std.450 Instruction not support, skip. opcode: %s, size: %d", spvmOpString(opcode.op), opcode.wordCount);
+  SKIP_CURRENT_OPCODE();
+  GLSL_GO_NEXT
 }
 
 DEF_GLSL_OP_FUNC(Round) {

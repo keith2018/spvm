@@ -17,8 +17,7 @@
 
 namespace SPVM {
 
-static constexpr SpvmWord OP_LABEL_CNT = 512;
-#define DEF_OP_FUNC(op) OpLabel_##op :
+#define DEF_OP_FUNC(op) case op :
 #define GO_NEXT                                                                     \
   if (ctx->untilResult != SpvmResultIdInvalid && ctx->results[ctx->untilResult]) {  \
     ctx->pc = pc;                                                                   \
@@ -26,7 +25,7 @@ static constexpr SpvmWord OP_LABEL_CNT = 512;
     return Result_NoError;                                                          \
   }                                                                                 \
   opcode = READ_OPCODE();                                                           \
-  goto *opLabels[opcode.op];
+  break;
 
 #define READ_WORD() *pc++
 #define SKIP_WORD() pc++
@@ -121,28 +120,15 @@ static SpvmImageOperands readImageOperands(SpvmWord **ppc, RuntimeContext *ctx, 
 }
 
 RuntimeResult execOpCodes(SpvmWord *pc, SpvmByte *sp, SpvmOpcode opcode, RuntimeContext *ctx) {
-  static void *opLabels[OP_LABEL_CNT];
-  static bool labelsInited = false;
-
-  if (!labelsInited) {
-    // init all slot with 'OpLabel_NotSupport'
-    for (auto &label : opLabels) {
-      label = &&OpLabel_NotSupport;
-    }
-#include "regspirv.inc"
-    labelsInited = true;
-  }
-
   if (ctx->untilResult != SpvmResultIdInvalid && ctx->results[ctx->untilResult]) {
     ctx->pc = pc;
     ctx->sp = sp;
     return Result_NoError;
   }
 
-  // start exec
-  goto *opLabels[opcode.op];
+  while(true) { switch(opcode.op) {
 
-DEF_OP_FUNC(NotSupport) {
+default: {
   LOGD("Instruction not support, skip. opcode: %s, size: %d", spvmOpString(opcode.op), opcode.wordCount);
   SKIP_CURRENT_OPCODE();
   GO_NEXT
@@ -246,29 +232,25 @@ DEF_OP_FUNC(SpvOpExtInstImport) {
   SpvmWord resultId = READ_WORD();
   SpvmString extName = READ_STR();
   if (strcmp(EXT_GLSLstd450, (const char *) extName.str) == 0) {
-    SpvmWord extStructSize = sizeof(SpvmExtInstImport) + GLSLstd450Count * sizeof(void *);
-    SpvmExtInstImport *ext = (SpvmExtInstImport *) HEAP_MALLOC(extStructSize);
+    SpvmExtInstImport *ext = (SpvmExtInstImport *) HEAP_MALLOC(sizeof(SpvmExtInstImport));
     ext->setId = resultId;
-    ext->insCnt = GLSLstd450Count;
-    for (SpvmWord i = 0; i < ext->insCnt; i++) {
-      ext->insLabels[i] = &&OpLabel_GLSLstd450NotSupport;
-    }
-#include "regglsl450.inc"
     ctx->results[resultId] = ext;
   } else {
     LOGE("ExtInstImport not support: %s", extName.str);
     return Result_Error;
   }
-
   GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpExtInst) {
-  SKIP_WORD_N(2);
-  SpvmExtInstImport *ext = (SpvmExtInstImport *) ctx->results[READ_WORD()];
-  void* extLabel = ext->insLabels[READ_WORD()];
+  SKIP_WORD_N(2);   // result type, result id
+  SKIP_WORD();      // SpvmExtInstImport *ext = (SpvmExtInstImport *) ctx->results[READ_WORD()];
+  SpvmWord ins = READ_WORD();
   REWIND_WORD_N(4);
-  goto *extLabel;
+  switch(ins) {     // Instruction
+#include "ext/GLSL.std.450.inc"
+  }
+  GO_NEXT
 }
 
 DEF_OP_FUNC(SpvOpMemoryModel) {
@@ -1851,9 +1833,7 @@ DEF_OP_FUNC(SpvOpUnreachable) {
   return Result_Unreachable;
 }
 
-
-// GLSL.std.450
-#include "ext/GLSL.std.450.inc"
+}}
 
 }
 }
