@@ -12,8 +12,6 @@
 
 namespace SPVM {
 
-class RuntimeQuadContext;
-
 typedef struct SpvmFrame {
   struct SpvmFrame *prevFrame;
   SpvmWord paramsIdx;
@@ -36,8 +34,6 @@ typedef enum {
 } RuntimeResult;
 
 typedef struct RuntimeContext {
-  RuntimeQuadContext *quadCtx;
-  SpvmWord quadIdx;
   SpvmModule *module;
   void **resultsInit;
   void **results;
@@ -45,19 +41,17 @@ typedef struct RuntimeContext {
   SpvmFrame *currFrame;
   SpvmWord *pc;
   SpvmByte *sp;
-  SpvmWord untilResult;
 } RuntimeContext;
 
 class Runtime {
  public:
   Runtime();
   ~Runtime();
-  bool initWithModule(SpvmModule *module, SpvmWord heapSize, SpvmByte *heap = nullptr,
-                      RuntimeQuadContext *quadCtx = nullptr, SpvmWord quadIdx = 0);
+  bool initWithModule(SpvmModule *module, SpvmWord heapSize, SpvmByte *heap = nullptr);
   bool execEntryPoint(SpvmWord entryIdx = 0);
 
   bool execPrepare(SpvmWord entryIdx = 0);
-  bool execContinue(SpvmWord untilResult = SpvmResultIdInvalid, SpvmValue **untilValue = nullptr);
+  bool execContinue();
 
   inline SpvmWord getLocationByName(const char *name) {
     return interface_.getLocationByName(name);

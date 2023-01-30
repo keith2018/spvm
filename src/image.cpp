@@ -617,8 +617,9 @@ SpvmF32 getDerivativeRhoMax(void *ctx, SpvmWord coordinateId, SpvmImageOperands 
     mx = readFromValue(operands->dx);
     my = readFromValue(operands->dy);
   } else {
-    mx = getDPdx(ctx, coordinateId);
-    my = getDPdy(ctx, coordinateId);
+      // TODO
+//    mx = getDPdx(ctx, coordinateId);
+//    my = getDPdy(ctx, coordinateId);
   }
 
   SpvmVec4 sizeInfo = {(SpvmI32) imageInfo->width, (SpvmI32) imageInfo->height, (SpvmI32) imageInfo->depth, 0};

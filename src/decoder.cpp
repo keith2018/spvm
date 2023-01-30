@@ -102,6 +102,11 @@ bool Decoder::decodeBytes(const SpvmByte *bytes, SpvmWord length, SpvmModule *mo
     ptr += insOp.wordCount;
   }
 
+  if (module->hasDerivativeOpcodes) {
+    LOGE("Derivative opcodes not support");
+    return false;
+  }
+
   return true;
 }
 

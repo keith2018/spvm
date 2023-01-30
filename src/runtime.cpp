@@ -18,8 +18,7 @@ Runtime::~Runtime() {
   }
 }
 
-bool Runtime::initWithModule(SpvmModule *module, SpvmWord heapSize, SpvmByte *heap,
-                             RuntimeQuadContext *quadCtx, SpvmWord quadIdx) {
+bool Runtime::initWithModule(SpvmModule *module, SpvmWord heapSize, SpvmByte *heap) {
   if (heapSize_ != 0) {
     LOGE("initWithModule already inited");
     return false;
@@ -40,8 +39,6 @@ bool Runtime::initWithModule(SpvmModule *module, SpvmWord heapSize, SpvmByte *he
     heap_ = nullptr;
   }
 
-  ctx_.quadCtx = quadCtx;
-  ctx_.quadIdx = quadIdx;
   ctx_.module = module;
   ctx_.resultsInit = (void **) heapBase;
   ctx_.results = (void **) (heapBase + module->bound * sizeof(void *));
@@ -110,26 +107,18 @@ bool Runtime::execPrepare(SpvmWord entryIdx) {
   return true;
 }
 
-bool Runtime::execContinue(SpvmWord untilResult, SpvmValue **untilValue) {
+bool Runtime::execContinue() {
   if (execRet_ == Result_ExecEnd) {
     return true;
   }
   RuntimeContext *ctx = &ctx_;
-  ctx->untilResult = untilResult;
 
   SpvmWord *pc = ctx->pc;
   SpvmByte *sp = ctx->sp;
   SpvmOpcode opcode = READ_OPCODE();
   execRet_ = execOpCodes(pc, sp, opcode, ctx);
 
-  bool success = execRet_ != Result_Error;
-  if (success && untilResult != SpvmResultIdInvalid && ctx->results[untilResult]) {
-    if (untilValue) {
-      *untilValue = (SpvmValue *) ctx->results[untilResult];
-    }
-  }
-
-  return success;
+  return execRet_ != Result_Error;
 }
 
 }

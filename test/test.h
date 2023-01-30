@@ -10,7 +10,6 @@
 
 #include "decoder.h"
 #include "runtime.h"
-#include "quad.h"
 #include "image.h"
 
 #define HEAP_SIZE 128 * 1024
@@ -28,20 +27,6 @@ typedef struct TestContext_ {
   }
 
 } TestContext;
-
-typedef struct TestQuadContext_ {
-  SPVM::SpvmModule module;
-  SPVM::RuntimeQuadContext quadContext;
-
-  bool decode(const char *path) {
-    return SPVM::Decoder::decodeFile(path, &module);
-  }
-
-  bool init() {
-    return quadContext.initWithModule(&module, HEAP_SIZE);
-  }
-
-} TestQuadContext;
 
 #define ASSERT_VEC2_EQ(vec, v0, v1)                 \
   ASSERT_EQ((vec)[0], v0);                          \

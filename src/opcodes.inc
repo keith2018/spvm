@@ -7,7 +7,6 @@
 #include <cmath>
 
 #include "spvm.h"
-#include "quad.h"
 #include "logger.h"
 #include "utils.h"
 #include "opstrings.h"
@@ -18,14 +17,7 @@
 namespace SPVM {
 
 #define DEF_OP_FUNC(op) case op :
-#define GO_NEXT                                                                     \
-  if (ctx->untilResult != SpvmResultIdInvalid && ctx->results[ctx->untilResult]) {  \
-    ctx->pc = pc;                                                                   \
-    ctx->sp = sp;                                                                   \
-    return Result_NoError;                                                          \
-  }                                                                                 \
-  opcode = READ_OPCODE();                                                           \
-  break;
+#define GO_NEXT opcode = READ_OPCODE(); break;
 
 #define READ_WORD() *pc++
 #define SKIP_WORD() pc++
@@ -120,12 +112,6 @@ static SpvmImageOperands readImageOperands(SpvmWord **ppc, RuntimeContext *ctx, 
 }
 
 RuntimeResult execOpCodes(SpvmWord *pc, SpvmByte *sp, SpvmOpcode opcode, RuntimeContext *ctx) {
-  if (ctx->untilResult != SpvmResultIdInvalid && ctx->results[ctx->untilResult]) {
-    ctx->pc = pc;
-    ctx->sp = sp;
-    return Result_NoError;
-  }
-
   while(true) { switch(opcode.op) {
 
 default: {
@@ -1609,126 +1595,6 @@ DEF_OP_FUNC(SpvOpFOrdGreaterThanEqual) {
 
 DEF_OP_FUNC(SpvOpFUnordGreaterThanEqual) {
   SPVM_MATH_FUNORD_IMPL(f1 >= f2)
-  GO_NEXT
-}
-
-#define READ_DERIVATIVE_OPERAND                                                               \
-  SpvmTypeBase *resultType = SPVM_TYPE(READ_WORD());                                          \
-  SpvmWord resultId = READ_WORD();                                                            \
-  SpvmWord P = READ_WORD();                                                                   \
-
-#define DERIVATIVE_WIDTH(dx, dy)                                                              \
-  if ((dx) && (dy)) {                                                                         \
-      if (ret->memberCnt > 0) {                                                               \
-        for (SpvmWord i = 0; i < ret->memberCnt; i++) {                                       \
-          ret->VECTOR_f32(i) = fabs((dx)->VECTOR_f32(i)) + fabs((dy)->VECTOR_f32(i));         \
-        }                                                                                     \
-      } else {                                                                                \
-        ret->value.f32 = fabs((dx)->value.f32) + fabs((dy)->value.f32);                       \
-      }                                                                                       \
-  } else {                                                                                    \
-    setValueF32(ret, SpvmNAN);                                                                \
-  }                                                                                           \
-
-DEF_OP_FUNC(SpvOpDPdx) {
-  READ_DERIVATIVE_OPERAND
-  if (ctx->quadCtx) {
-    SpvmValue *dx = ctx->quadCtx->getDPdx(ctx->quadIdx, P);
-    ctx->results[resultId] = dx ? dx : CREATE_VALUE_NAN(resultType);
-  } else {
-    ctx->results[resultId] = CREATE_VALUE(resultType);
-  }
-  GO_NEXT
-}
-
-DEF_OP_FUNC(SpvOpDPdy) {
-  READ_DERIVATIVE_OPERAND
-  if (ctx->quadCtx) {
-    SpvmValue *dy = ctx->quadCtx->getDPdy(ctx->quadIdx, P);
-    ctx->results[resultId] = dy ? dy : CREATE_VALUE_NAN(resultType);
-  } else {
-    ctx->results[resultId] = CREATE_VALUE(resultType);
-  }
-  GO_NEXT
-}
-
-DEF_OP_FUNC(SpvOpFwidth) {
-  READ_DERIVATIVE_OPERAND
-  SpvmValue *ret = CREATE_VALUE(resultType);
-  if (ctx->quadCtx) {
-    SpvmValue *dx = ctx->quadCtx->getDPdx(ctx->quadIdx, P);
-    SpvmValue *dy = ctx->quadCtx->getDPdy(ctx->quadIdx, P);
-    DERIVATIVE_WIDTH(dx, dy)
-  }
-  ctx->results[resultId] = ret;
-  GO_NEXT
-}
-
-DEF_OP_FUNC(SpvOpDPdxFine) {
-  READ_DERIVATIVE_OPERAND
-  if (ctx->quadCtx) {
-    SpvmValue *dx = ctx->quadCtx->getDPdxFine(ctx->quadIdx, P);
-    ctx->results[resultId] = dx ? dx : CREATE_VALUE_NAN(resultType);
-  } else {
-    ctx->results[resultId] = CREATE_VALUE(resultType);
-  }
-  GO_NEXT
-}
-
-DEF_OP_FUNC(SpvOpDPdyFine) {
-  READ_DERIVATIVE_OPERAND
-  if (ctx->quadCtx) {
-    SpvmValue *dy = ctx->quadCtx->getDPdyFine(ctx->quadIdx, P);
-    ctx->results[resultId] = dy ? dy : CREATE_VALUE_NAN(resultType);
-  } else {
-    ctx->results[resultId] = CREATE_VALUE(resultType);
-  }
-  GO_NEXT
-}
-
-DEF_OP_FUNC(SpvOpFwidthFine) {
-  READ_DERIVATIVE_OPERAND
-  SpvmValue *ret = CREATE_VALUE(resultType);
-  if (ctx->quadCtx) {
-    SpvmValue *dx = ctx->quadCtx->getDPdxFine(ctx->quadIdx, P);
-    SpvmValue *dy = ctx->quadCtx->getDPdyFine(ctx->quadIdx, P);
-    DERIVATIVE_WIDTH(dx, dy)
-  }
-  ctx->results[resultId] = ret;
-  GO_NEXT
-}
-
-DEF_OP_FUNC(SpvOpDPdxCoarse) {
-  READ_DERIVATIVE_OPERAND
-  if (ctx->quadCtx) {
-    SpvmValue *dx = ctx->quadCtx->getDPdxCoarse(ctx->quadIdx, P);
-    ctx->results[resultId] = dx ? dx : CREATE_VALUE_NAN(resultType);
-  } else {
-    ctx->results[resultId] = CREATE_VALUE(resultType);
-  }
-  GO_NEXT
-}
-
-DEF_OP_FUNC(SpvOpDPdyCoarse) {
-  READ_DERIVATIVE_OPERAND
-  if (ctx->quadCtx) {
-    SpvmValue *dy = ctx->quadCtx->getDPdyCoarse(ctx->quadIdx, P);
-    ctx->results[resultId] = dy ? dy : CREATE_VALUE_NAN(resultType);
-  } else {
-    ctx->results[resultId] = CREATE_VALUE(resultType);
-  }
-  GO_NEXT
-}
-
-DEF_OP_FUNC(SpvOpFwidthCoarse) {
-  READ_DERIVATIVE_OPERAND
-  SpvmValue *ret = CREATE_VALUE(resultType);
-  if (ctx->quadCtx) {
-    SpvmValue *dx = ctx->quadCtx->getDPdxCoarse(ctx->quadIdx, P);
-    SpvmValue *dy = ctx->quadCtx->getDPdyCoarse(ctx->quadIdx, P);
-    DERIVATIVE_WIDTH(dx, dy)
-  }
-  ctx->results[resultId] = ret;
   GO_NEXT
 }
 

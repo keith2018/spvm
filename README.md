@@ -16,6 +16,7 @@ Specifications that the project follows is:
   - [Ext (GLSL.std.450) Opcodes](OPCODE_EXT.md)
 - Only support 32-bits width [Numerical type](https://registry.khronos.org/SPIR-V/specs/1.0/SPIRV.html#_types) (float, integer)
 - Only support [Addressing Model](https://registry.khronos.org/SPIR-V/specs/1.0/SPIRV.html#Addressing_Model) `Logical`
+- Not support derivative opcodes (dFdx\dFdy\...)
 - Not support OpenCL related instructions
 
 ### TODO

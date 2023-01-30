@@ -263,7 +263,4 @@ SpvmVec4 readFromValue(SpvmValue *value);
 
 void valueSubF32(SpvmValue *ret, SpvmValue *a, SpvmValue *b);
 
-SpvmVec4 getDPdx(void *ctx, SpvmWord P);
-SpvmVec4 getDPdy(void *ctx, SpvmWord P);
-
 }

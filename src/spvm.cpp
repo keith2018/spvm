@@ -5,7 +5,6 @@
  */
 
 #include "spvm.h"
-#include "quad.h"
 #include "opstrings.h"
 #include "logger.h"
 
@@ -213,34 +212,6 @@ void valueSubF32(SpvmValue *ret, SpvmValue *a, SpvmValue *b) {
   } else {
     ret->value.f32 = a->value.f32 - b->value.f32;
   }
-}
-
-SpvmVec4 getDPdx(void *ctx, SpvmWord P) {
-  SpvmVec4 ret{0, 0, 0, 0};
-  RuntimeContext *rtCtx = (RuntimeContext *) ctx;
-  if (rtCtx->quadCtx == nullptr) {
-//    LOGE("getDPdx error: no quad context");
-    return ret;
-  }
-  SpvmValue *dx = rtCtx->quadCtx->getDPdx(rtCtx->quadIdx, P);
-  if (dx) {
-    ret = readFromValue(dx);
-  }
-  return ret;
-}
-
-SpvmVec4 getDPdy(void *ctx, SpvmWord P) {
-  SpvmVec4 ret{0, 0, 0, 0};
-  RuntimeContext *rtCtx = (RuntimeContext *) ctx;
-  if (rtCtx->quadCtx == nullptr) {
-//    LOGE("getDPdx error: no quad context");
-    return ret;
-  }
-  SpvmValue *dy = rtCtx->quadCtx->getDPdy(rtCtx->quadIdx, P);
-  if (dy) {
-    ret = readFromValue(dy);
-  }
-  return ret;
 }
 
 }
